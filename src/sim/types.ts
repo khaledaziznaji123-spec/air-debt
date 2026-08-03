@@ -43,6 +43,42 @@ export type Player = {
   action: ActionState;
 };
 
+/**
+ * What an enemy is doing. PRD FR-7.1: an enemy is a subset of the player's
+ * verbs, so these states are deliberately the same shape as the player's.
+ */
+export type EnemyPhase =
+  | "idle"
+  | "approaching"
+  | "telegraphing"
+  | "striking"
+  | "recovering"
+  | "staggered"
+  | "dead";
+
+/** Which of the player's verbs this enemy has. Difficulty is breadth (FR-7.2). */
+export type EnemyVerbs = {
+  move: boolean;
+  attack: boolean;
+  slide: boolean;
+  block: boolean;
+};
+
+export type Enemy = {
+  /** Content slug — the join key everywhere (ARCH conventions). */
+  kind: "enemy.goblin";
+  x: number;
+  y: number;
+  facing: 1 | -1;
+  hp: number;
+  phase: EnemyPhase;
+  /** Ticks elapsed in the current phase. */
+  phaseTicks: number;
+  verbs: EnemyVerbs;
+  /** Set for one tick when this enemy's swing is parried, so the view can flash. */
+  parriedThisTick: boolean;
+};
+
 /** How a run ended. PRD fail states — death and transformation differ in kind. */
 export type RunOutcome = "running" | "died" | "transformed" | "extracted";
 
@@ -54,7 +90,19 @@ export type SimState = {
   /** Air the run started with, for HUD proportions. */
   airCapacity: number;
   player: Player;
+  enemies: readonly Enemy[];
   outcome: RunOutcome;
   /** The intents held last tick, so the reducer can detect presses. */
   previousIntents: Intents;
+  /**
+   * Things that happened this tick, for the view to react to. Cleared every
+   * tick — never accumulated, so state stays a pure function of the inputs.
+   */
+  events: readonly SimEvent[];
 };
+
+export type SimEvent =
+  | { type: "parry"; x: number; y: number }
+  | { type: "playerHit"; damage: number }
+  | { type: "enemyHit"; damage: number; x: number; y: number }
+  | { type: "enemyDied"; x: number; y: number };

@@ -15,8 +15,18 @@ import type { SimState } from "./types.ts";
 export { Intent, has, add, remove, pressed } from "./intents.ts";
 export type { Intents, InputRecord, IntentFlag } from "./intents.ts";
 export { createRng, deriveSeed, type Rng } from "./rng.ts";
-export { step } from "./step.ts";
-export type { SimState, Player, PlayerStance, ActionState, RunOutcome } from "./types.ts";
+export { step, isParrying } from "./step.ts";
+export type {
+  SimState,
+  Player,
+  PlayerStance,
+  ActionState,
+  RunOutcome,
+  Enemy,
+  EnemyPhase,
+  EnemyVerbs,
+  SimEvent,
+} from "./types.ts";
 
 /**
  * A fresh run.
@@ -24,11 +34,28 @@ export type { SimState, Player, PlayerStance, ActionState, RunOutcome } from "./
  * @param airTicks starting air. Defaults to the base tank (PRD FR-17.1);
  *   the real value comes from the player's upgrades, resolved server-side.
  */
+/** A goblin: the floor of the verb scale — it moves and it attacks (FR-7.1). */
+function goblin(x: number): SimState["enemies"][number] {
+  return {
+    kind: "enemy.goblin",
+    x,
+    y: tuning.room.floorY,
+    facing: -1,
+    hp: tuning.enemies.goblin.maxHp,
+    phase: "approaching",
+    phaseTicks: 0,
+    verbs: { move: true, attack: true, slide: false, block: false },
+    parriedThisTick: false,
+  };
+}
+
 export function createInitialState(airTicks: number = tuning.air.base): SimState {
   return {
     tick: 0,
     air: airTicks,
     airCapacity: airTicks,
+    enemies: [goblin(820), goblin(1080)],
+    events: [],
     player: {
       x: tuning.room.playerSpawnX,
       y: tuning.room.floorY,

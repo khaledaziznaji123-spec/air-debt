@@ -94,6 +94,52 @@ export const tuning = {
     width: 28,
     height: 56,
     maxHp: 100,
+    /** Sword damage per connecting hit. */
+    attackDamage: 34,
+    /** Reach ahead of the player's facing edge. */
+    attackReach: 40,
+    /** Ticks into the swing before the hitbox goes live (startup). */
+    attackStartup: s(0.1),
+    /** How long the hitbox stays live. */
+    attackActive: s(0.08),
+    /** The stun attack: weak, slow, and the only guard-breaker (FR-5.6). */
+    stunDamage: 8,
+    stunStartup: s(0.3),
+    stunActive: s(0.1),
+    stunReach: 34,
+  },
+
+  /**
+   * Enemies. PRD FR-7: an enemy is defined by which of the player's verbs it
+   * has, not by inflated numbers. The goblin is the floor of that scale —
+   * it moves and it attacks, and that is all.
+   */
+  enemies: {
+    goblin: {
+      width: 26,
+      height: 48,
+      maxHp: 60,
+      speed: 1.15,
+      damage: 12,
+      /** How close before it commits to a swing. */
+      attackRange: 46,
+      /** Wind-up. This is the window the player is reading (FR-18.5 in spirit). */
+      telegraph: s(0.45),
+      /** Hitbox live time. */
+      active: s(0.1),
+      /** Recovery after the swing, whether or not it connected. */
+      recovery: s(0.5),
+      /** Reach of its swing. */
+      reach: 40,
+    },
+  },
+
+  /** What a parry does back. PRD FR-5.8. */
+  parry: {
+    /** Damage reflected into a melee attacker. */
+    riposteDamage: 18,
+    /** How long the attacker is staggered after being parried. */
+    staggerTicks: s(0.6),
   },
 
   /** PRD FR-13.2a/13.2b — the anti-pay-to-win guarantee. */

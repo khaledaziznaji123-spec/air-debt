@@ -24,6 +24,11 @@ const COLOR = {
   air: 0x4ecdc4,
   airLow: 0xe56b6f,
   hud: 0xe8edf5,
+  enemy: 0x7d8794,
+  enemyTelegraph: 0xf4a259,
+  enemyStriking: 0xe56b6f,
+  enemyStaggered: 0x4ecdc4,
+  parryFlash: 0xffffff,
 } as const;
 
 /** The last ten seconds, when the vignette starts closing in (PRD FR-1.2). */
@@ -33,9 +38,12 @@ export class Renderer {
   private app: Application;
   private world = new Container();
   private playerGfx = new Graphics();
+  private enemyGfx = new Graphics();
+  private fxGfx = new Graphics();
   private floorGfx = new Graphics();
   private vignette = new Graphics();
   private airBar = new Graphics();
+  private healthBar = new Graphics();
   private airText: Text;
   private debugText: Text;
   private debug = false;
@@ -61,8 +69,15 @@ export class Renderer {
       }),
     });
 
-    this.world.addChild(this.floorGfx, this.playerGfx);
-    this.app.stage.addChild(this.world, this.vignette, this.airBar, this.airText, this.debugText);
+    this.world.addChild(this.floorGfx, this.enemyGfx, this.playerGfx, this.fxGfx);
+    this.app.stage.addChild(
+      this.world,
+      this.vignette,
+      this.airBar,
+      this.healthBar,
+      this.airText,
+      this.debugText,
+    );
   }
 
   static async create(canvas: HTMLCanvasElement): Promise<Renderer> {
@@ -99,8 +114,11 @@ export class Renderer {
     const y = jumped ? p.y : prev.y + (p.y - prev.y) * alpha;
 
     this.drawFloor();
+    this.drawEnemies(state);
     this.drawPlayer(state, x, y);
+    this.drawFx(state);
     this.drawAir(state);
+    this.drawHealth(state);
     this.drawVignette(state);
 
     if (this.debug) {
@@ -122,6 +140,45 @@ export class Renderer {
     const { floorY, width } = tuning.room;
     this.floorGfx.clear();
     this.floorGfx.rect(0, floorY, width, 720 - floorY).fill(COLOR.floor);
+  }
+
+  private drawEnemies(state: SimState): void {
+    const { width, height, maxHp } = tuning.enemies.goblin;
+    this.enemyGfx.clear();
+    for (const e of state.enemies) {
+      if (e.phase === "dead") continue;
+
+      // The telegraph has to be loud — a wind-up the player cannot read makes
+      // the parry unfair, which breaks the whole design (PRD FR-6.1).
+      const colour =
+        e.phase === "telegraphing"
+          ? COLOR.enemyTelegraph
+          : e.phase === "striking"
+            ? COLOR.enemyStriking
+            : e.phase === "staggered"
+              ? COLOR.enemyStaggered
+              : COLOR.enemy;
+
+      this.enemyGfx.rect(e.x - width / 2, e.y - height, width, height).fill(colour);
+
+      // Wind-up bar, so the tell is legible before there is animation to carry it.
+      if (e.phase === "telegraphing") {
+        const t = e.phaseTicks / tuning.enemies.goblin.telegraph;
+        this.enemyGfx
+          .rect(e.x - width / 2, e.y - height - 12, width, 4)
+          .fill({ color: 0xffffff, alpha: 0.15 });
+        this.enemyGfx
+          .rect(e.x - width / 2, e.y - height - 12, width * t, 4)
+          .fill(COLOR.enemyTelegraph);
+      }
+
+      // Health, only once hurt — no clutter on a full-health room.
+      if (e.hp < maxHp) {
+        this.enemyGfx
+          .rect(e.x - width / 2, e.y - height - 5, width * (e.hp / maxHp), 3)
+          .fill(COLOR.enemyStriking);
+      }
+    }
   }
 
   private drawPlayer(state: SimState, x: number, y: number): void {
@@ -160,6 +217,38 @@ export class Renderer {
     this.airText.text = seconds >= 10 ? seconds.toFixed(0) : seconds.toFixed(1);
     this.airText.style.fill = low ? COLOR.airLow : COLOR.hud;
     this.airText.position.set(tuning.room.width / 2, 20);
+  }
+
+  /**
+   * One-tick feedback. Events are cleared by the sim every tick, so these are
+   * drawn as instantaneous flashes rather than tracked as animation state —
+   * keeping timing-dependent state out of the view (ARCH AD-5).
+   */
+  private drawFx(state: SimState): void {
+    this.fxGfx.clear();
+    for (const event of state.events) {
+      if (event.type === "parry") {
+        // The parry has to feel like the best thing that can happen to you.
+        this.fxGfx.circle(event.x, event.y, 46).fill({ color: COLOR.parryFlash, alpha: 0.5 });
+        this.fxGfx.circle(event.x, event.y, 74).fill({ color: COLOR.enemyStaggered, alpha: 0.22 });
+      } else if (event.type === "enemyHit") {
+        this.fxGfx.circle(event.x, event.y, 22).fill({ color: COLOR.enemyStriking, alpha: 0.45 });
+      } else if (event.type === "playerHit") {
+        this.fxGfx
+          .rect(0, 0, tuning.room.width, 720)
+          .fill({ color: COLOR.enemyStriking, alpha: 0.14 });
+      }
+    }
+  }
+
+  private drawHealth(state: SimState): void {
+    const pct = state.player.hp / tuning.player.maxHp;
+    const barWidth = 220;
+    this.healthBar.clear();
+    this.healthBar.rect(24, 24, barWidth, 10).fill({ color: 0xffffff, alpha: 0.08 });
+    this.healthBar
+      .rect(24, 24, barWidth * Math.max(pct, 0), 10)
+      .fill(pct > 0.35 ? COLOR.enemyStaggered : COLOR.enemyStriking);
   }
 
   private drawVignette(state: SimState): void {
