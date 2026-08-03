@@ -38,3 +38,6 @@ Thumbs.db
 .claude/settings.local.json
 
 .vercel
+
+# pitch materials - keep out of the public repo
+*.pptx
