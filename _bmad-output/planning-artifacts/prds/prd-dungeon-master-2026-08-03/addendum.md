@@ -1,11 +1,11 @@
 ---
-title: "PRD Addendum: Dungeon Master (working title) — v1"
+title: "PRD Addendum: Air Debt — v1"
 status: draft
 created: 2026-08-03
 updated: 2026-08-03
 ---
 
-# PRD Addendum — Dungeon Master v1
+# PRD Addendum — Air Debt v1
 
 Depth that belongs downstream of the PRD: mechanism, technical-how, sourcing options, and
 rejected alternatives. The PRD states *what must be true*; this states *how it might be done*
@@ -66,13 +66,12 @@ is the thing playtest will iterate on hardest.
 
 ### Why this matters for the renderer choice
 
-The renderer decision is still open (Phaser vs. PixiJS vs. hand-rolled canvas — see the
-project's `CLAUDE.md`). The hitbox model argues for keeping **the simulation independent of
-the renderer**: collision, timing and state live in a plain TypeScript module; the renderer
-draws what the simulation says. That preserves NFR-2 and keeps deterministic run validation
-(Q10) reachable. Using an engine's built-in physics and animation-driven collision tends to
-pull simulation state into the engine and closes that door. Flagged for the architecture phase,
-not decided here.
+**Decided: PixiJS as a pure view layer** (NFR-5.3). The hitbox model was one of the arguments —
+collision, timing and state live in a plain TypeScript module, and the renderer draws what the
+simulation says. That preserves NFR-2 and keeps deterministic run validation reachable. An
+engine's built-in physics and animation-driven collision pulls simulation state into the engine
+and closes that door, which is why Phaser with Arcade physics was rejected. The architecture
+phase still owns the module boundaries; the constraint is settled.
 
 ---
 

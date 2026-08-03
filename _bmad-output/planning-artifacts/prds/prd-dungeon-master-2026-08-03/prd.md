@@ -1,11 +1,11 @@
 ---
-title: "PRD: Dungeon Master (working title) — v1"
+title: "PRD: Air Debt — v1"
 status: final
 created: 2026-08-03
 updated: 2026-08-04
 ---
 
-# PRD: Dungeon Master (working title) — v1
+# PRD: Air Debt — v1
 
 > Scoped to v1 only: single-player timed dungeon loop, full economy, shortcuts,
 > bosses + Hard Mode, training mode, accounts and persistent progression.

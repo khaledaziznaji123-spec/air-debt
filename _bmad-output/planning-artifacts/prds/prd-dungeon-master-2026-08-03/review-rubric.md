@@ -1,10 +1,10 @@
 ---
-title: "PRD Quality Review — Dungeon Master v1"
+title: "PRD Quality Review — Air Debt v1"
 status: complete
 created: 2026-08-04
 ---
 
-# PRD Quality Review — Dungeon Master (working title) v1
+# PRD Quality Review — Air Debt v1
 
 Reviewed against the PRD quality rubric. Run inline during Finalize.
 
@@ -106,7 +106,7 @@ FR-19 appear in The Timer, FR-23 in Dungeon Structure, FR-26 before FR-14). A re
 sequence will be confused; a reader following sections will not.
 
 ### Findings
-- **medium** **No glossary** (§ *absent*). Terms like *frontier*, *known ground*, *run intent*, *Passage*, *lever*, *grade*, *environment*, *bag* carry precise meanings established across different sections. UX and architecture will source-extract these. *Fix:* add a short glossary before the UX phase.
+- **medium — FIXED during finalize** **No glossary** (§ *absent*). Terms like *frontier*, *known ground*, *run intent*, *Passage*, *lever*, *grade*, *environment*, *bag* carry precise meanings established across different sections. UX and architecture will source-extract these. *Fix applied:* a 22-term Glossary was added ahead of World and Fiction.
 - **low** ID ordering does not match document order (§ noted in the header). *Fix:* documented and intentional; leave it.
 - **low** Only one user journey. For a consumer product this is thin — a second journey covering a new player's first three runs would exercise onboarding, which is where two Success Metrics targets sit (reaching environment 2, levering a first shortcut).
 
