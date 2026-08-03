@@ -41,3 +41,7 @@ Thumbs.db
 
 # pitch materials - keep out of the public repo
 *.pptx
+
+# playwright mcp scratch
+.playwright-mcp/
+play-initial.png

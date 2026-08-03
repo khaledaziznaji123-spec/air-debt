@@ -58,6 +58,44 @@ export const tuning = {
     tellLeadTime: s(0.5),
   },
 
+  /**
+   * Movement. World units per tick, so nothing here needs a delta.
+   * One world unit is one pixel at the reference resolution; the renderer
+   * owns any scaling from there (ARCH AD-16).
+   */
+  movement: {
+    /** Horizontal run speed. */
+    runSpeed: 3.2,
+    /** Upward impulse applied on the jump tick. */
+    jumpImpulse: 11.5,
+    /** Downward acceleration per tick. */
+    gravity: 0.55,
+    /** Terminal fall speed, so a long drop stays predictable. */
+    maxFallSpeed: 16,
+    /** Slide: forward burst speed and how long it lasts (FR-5.2). */
+    slideSpeed: 6.4,
+    slideDuration: s(0.25),
+    /** Backstep: the standing / mid-attack variant of the same button. */
+    backstepSpeed: 5.0,
+    backstepDuration: s(0.15),
+    /** Crouch shrinks the hurtbox; height multiplier applied while held. */
+    crouchHeightScale: 0.55,
+  },
+
+  /** The playfield for the first slice — a single flat room. */
+  room: {
+    width: 1280,
+    floorY: 560,
+    playerSpawnX: 200,
+  },
+
+  /** Player body, in world units. Hurtbox, not sprite (see addendum). */
+  player: {
+    width: 28,
+    height: 56,
+    maxHp: 100,
+  },
+
   /** PRD FR-13.2a/13.2b — the anti-pay-to-win guarantee. */
   economy: {
     /** Gold is spendable only at or above this fraction of the required gems, per grade. */
