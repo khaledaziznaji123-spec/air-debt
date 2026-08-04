@@ -278,8 +278,10 @@ export class Renderer {
       }
       this.playerSprite.position.set(x, y);
       this.playerSprite.scale.x = p.facing;
-      // Tint carries state until there are per-action poses to carry it.
-      this.playerSprite.tint = colour === COLOR.player ? 0xffffff : colour;
+      // Deliberately untinted: multiplying a coloured sprite by a state colour
+      // muddies both. State reads from the swing box and the block ring below,
+      // which are clearer anyway.
+      this.playerSprite.tint = 0xffffff;
     } else {
       // Hurtbox, drawn from the feet up — the sprite will hang off this later.
       this.playerGfx.rect(x - width / 2, y - h, width, h).fill(colour);
