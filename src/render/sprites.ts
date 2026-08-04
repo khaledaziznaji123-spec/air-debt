@@ -54,8 +54,8 @@ export const SPRITE_MANIFEST: Record<SpriteKey, SpriteDef> = {
     path: "/art/player-run.png",
     width: 48,
     height: 96,
-    frames: 8,
-    ticksPerFrame: 5,
+    frames: 12,
+    ticksPerFrame: 4,
   },
   // Two swings, alternating, so a chain never replays the same animation.
   "player.attack.a": {

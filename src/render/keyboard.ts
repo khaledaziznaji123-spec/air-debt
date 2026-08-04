@@ -25,6 +25,7 @@ export const DEFAULT_BINDINGS: Bindings = {
   ShiftRight: Intent.Slide,
   KeyQ: Intent.Attack,
   KeyJ: Intent.Attack,
+  KeyR: Intent.Block,
   KeyK: Intent.Block,
   KeyL: Intent.Stun,
   KeyI: Intent.Bow,

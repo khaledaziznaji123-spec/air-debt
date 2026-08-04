@@ -283,7 +283,7 @@ def idle(n=4):
     return out
 
 
-def walk(n=8):
+def walk(n=12):
     out = []
     for i in range(n):
         p = (i / n) * math.tau

@@ -36,7 +36,7 @@ const CONTROLS = [
   { key: "S", label: "Crouch", flag: Intent.Crouch },
   { key: "Shift", label: "Slide", flag: Intent.Slide },
   { key: "Q", label: "Attack", flag: Intent.Attack },
-  { key: "K", label: "Block / Parry", flag: Intent.Block, emphasis: true },
+  { key: "R", label: "Block / Parry", flag: Intent.Block, emphasis: true },
   { key: "L", label: "Stun", flag: Intent.Stun },
 ] as const;
 /** Never simulate more than this in one frame — a backgrounded tab must not
@@ -201,7 +201,7 @@ export default function Game() {
 
       <div className="flex w-full max-w-[1280px] items-center justify-between text-xs text-[#8a94a6]">
         <p>
-          Press <span className="font-bold text-[#4ecdc4]">K</span> the moment a
+          Press <span className="font-bold text-[#4ecdc4]">R</span> the moment a
           goblin&apos;s swing lands — not when its wind-up bar starts.
         </p>
         <label className="flex cursor-pointer items-center gap-2 select-none">

@@ -66,8 +66,9 @@ export const tuning = {
   movement: {
     /** Horizontal run speed. */
     runSpeed: 3.2,
-    /** Upward impulse applied on the jump tick. */
-    jumpImpulse: 11.5,
+    /** Upward impulse applied on the jump tick. Tall enough to clear a goblin
+     *  and to give the smash-down a real drop to fall through. */
+    jumpImpulse: 15.5,
     /** Downward acceleration per tick. */
     gravity: 0.55,
     /** Terminal fall speed, so a long drop stays predictable. */

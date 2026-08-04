@@ -22,6 +22,7 @@ import {
 import { tuning } from "../config/tuning.ts";
 import { playerHitbox, type SimState } from "../sim/index.ts";
 import { SpriteSet } from "./sprites.ts";
+import { Particles } from "./particles.ts";
 
 const COLOR = {
   sky: 0x0b0e14,
@@ -62,6 +63,8 @@ export class Renderer {
   private enemySprites: Sprite[] = [];
   private playerSprite: Sprite | null = null;
   private floorTile: TilingSprite | null = null;
+  private particles = new Particles();
+  private lastDrawMs = 0;
 
   private constructor(app: Application, art: SpriteSet) {
     this.app = app;
@@ -90,6 +93,7 @@ export class Renderer {
       this.enemyGfx,
       this.playerGfx,
       this.fxGfx,
+      this.particles.gfx,
     );
     this.app.stage.addChild(
       this.world,
@@ -137,6 +141,16 @@ export class Renderer {
     const x = jumped ? p.x : prev.x + (p.x - prev.x) * alpha;
     const y = jumped ? p.y : prev.y + (p.y - prev.y) * alpha;
 
+    const now = performance.now();
+    const dt =
+      this.lastDrawMs === 0
+        ? 0
+        : Math.min((now - this.lastDrawMs) / 1000, 0.05);
+    this.lastDrawMs = now;
+    this.spawnParticles(state);
+    this.particles.update(dt);
+    this.particles.draw();
+
     this.drawFloor();
     this.drawEnemies(state);
     this.drawPlayer(state, x, y);
@@ -160,6 +174,48 @@ export class Renderer {
         `art      ${this.art.loaded.size}/16 loaded`,
         ...this.art.issues.map((w) => `  ! ${w}`),
       ].join("\n");
+    }
+  }
+
+  /**
+   * Turn this tick's simulation events into particles. Events are per-tick and
+   * cleared by the sim, so each one spawns exactly once.
+   */
+  private spawnParticles(state: SimState): void {
+    const p = state.player;
+    for (const event of state.events) {
+      switch (event.type) {
+        case "parry":
+          this.particles.parry(event.x, event.y);
+          break;
+        case "enemyHit":
+          this.particles.hit(event.x, event.y, p.facing);
+          break;
+        case "playerHit":
+          this.particles.hit(
+            p.x,
+            p.y - tuning.player.height * 0.6,
+            p.facing > 0 ? -1 : 1,
+            10,
+          );
+          break;
+        case "enemyDied":
+          this.particles.impact(event.x, event.y, 24);
+          break;
+      }
+    }
+
+    // The smash impact is a state, not an event: fire it on the first live tick.
+    if (
+      p.action.kind === "smash" &&
+      p.action.elapsed === 0 &&
+      p.stance !== "airborne"
+    ) {
+      this.particles.impact(p.x, p.y, tuning.player.smashRadius);
+    }
+    // A slide kicks up motes the whole way along.
+    if (p.dashTicks > 0 && p.stance === "sliding") {
+      this.particles.dust(p.x, p.y, p.facing);
     }
   }
 
@@ -411,29 +467,14 @@ export class Renderer {
         .fill(colour);
     }
 
-    // The swing itself. Without this, attacking reads as nothing happening —
-    // the player has no way to know the game registered the press.
+    // The swing itself, as an arc rather than a box. Without a visible slash
+    // the attack reads as nothing happening; a rectangle reads as a debug aid.
     const swing = playerHitbox(p);
-    if (swing) {
-      const dx = x - p.x; // follow the interpolated body
-      this.playerGfx
-        .rect(
-          swing.left + dx,
-          swing.top,
-          swing.right - swing.left,
-          swing.bottom - swing.top,
-        )
-        .fill({ color: COLOR.swing, alpha: 0.55 });
-    } else if (p.action.kind === "attack" || p.action.kind === "stun") {
-      // Wind-up and recovery, shown faintly so commitment is visible too.
-      const reach =
-        p.action.kind === "stun"
-          ? tuning.player.stunReach
-          : tuning.player.attackReach;
-      const left = p.facing > 0 ? x : x - reach;
-      this.playerGfx
-        .rect(left, y - h * 0.8, reach, 6)
-        .fill({ color: COLOR.swing, alpha: 0.18 });
+    if (swing && p.action.kind !== "smash") {
+      const t =
+        (p.action.elapsed - tuning.player.attackStartup) /
+        Math.max(tuning.player.attackActive, 1);
+      this.drawSlash(x, y - h * 0.55, p.facing, Math.min(Math.max(t, 0), 1));
     }
 
     // Block: the parry window and the punish tail must look different, because
@@ -475,6 +516,46 @@ export class Renderer {
    * drawn as instantaneous flashes rather than tracked as animation state —
    * keeping timing-dependent state out of the view (ARCH AD-5).
    */
+  /**
+   * A crescent slash sweeping through its arc. Drawn as a stack of strokes at
+   * decreasing radius so it reads as a blade trail rather than a shape — the
+   * leading edge is bright and the tail falls away.
+   */
+  private drawSlash(
+    x: number,
+    y: number,
+    facing: 1 | -1,
+    progress: number,
+  ): void {
+    const reach = tuning.player.attackReach;
+    // Sweep from high to low across the active frames.
+    const from = -1.15 + progress * 1.6;
+    const spread = 1.5;
+
+    for (let layer = 0; layer < 4; layer++) {
+      const r = reach * (1 - layer * 0.13);
+      const alpha = (0.85 - layer * 0.18) * (1 - progress * 0.35);
+      const width = 7 - layer * 1.4;
+      const colour =
+        layer === 0 ? 0xfff3c4 : layer === 1 ? 0xf4d59a : COLOR.swing;
+
+      const steps = 10;
+      let started = false;
+      for (let i = 0; i <= steps; i++) {
+        const a = from + (spread * i) / steps;
+        const px = x + Math.cos(a) * r * facing;
+        const py = y + Math.sin(a) * r;
+        if (!started) {
+          this.playerGfx.moveTo(px, py);
+          started = true;
+        } else {
+          this.playerGfx.lineTo(px, py);
+        }
+      }
+      this.playerGfx.stroke({ width, color: colour, alpha });
+    }
+  }
+
   private drawFx(state: SimState): void {
     this.fxGfx.clear();
     for (const event of state.events) {
