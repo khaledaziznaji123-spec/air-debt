@@ -11,12 +11,28 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { createInitialState, step, type SimState, type InputRecord } from "@/sim";
+import { createInitialState, step, Intent, type SimState, type InputRecord } from "@/sim";
 import { KeyboardInput } from "@/render/keyboard";
 import { Renderer } from "@/render/renderer";
 import { TICK_HZ, tuning } from "@/config/tuning";
 
 const MS_PER_TICK = 1000 / TICK_HZ;
+
+/**
+ * The on-screen control bar. Temporary scaffolding while there is no tutorial —
+ * but it also makes input visible, which is worth keeping around: a key that
+ * lights up proves the game registered the press.
+ */
+const CONTROLS = [
+  { key: "A", label: "Left", flag: Intent.Left },
+  { key: "D", label: "Right", flag: Intent.Right },
+  { key: "W", label: "Jump", flag: Intent.Jump },
+  { key: "S", label: "Crouch", flag: Intent.Crouch },
+  { key: "Shift", label: "Slide", flag: Intent.Slide },
+  { key: "J", label: "Attack", flag: Intent.Attack },
+  { key: "K", label: "Block / Parry", flag: Intent.Block, emphasis: true },
+  { key: "L", label: "Stun", flag: Intent.Stun },
+] as const;
 /** Never simulate more than this in one frame — a backgrounded tab must not
  *  come back and run thousands of ticks at once. */
 const MAX_CATCHUP_TICKS = 8;
@@ -27,6 +43,7 @@ export default function Game() {
   const [debug, setDebug] = useState(true);
   const [runKey, setRunKey] = useState(0);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [heldIntents, setHeldIntents] = useState(0);
   // Mirrored into a ref so the render loop can read the latest value without
   // being torn down and rebuilt every time the toggle flips.
   const debugRef = useRef(debug);
@@ -81,6 +98,8 @@ export default function Game() {
           const intents = input.read();
           if (intents !== state.previousIntents) {
             log.push({ tick: state.tick, intents });
+            // Only on change — this would otherwise be 60 renders a second.
+            setHeldIntents(intents);
           }
           previous = state;
           state = step(state, intents);
@@ -140,15 +159,33 @@ export default function Game() {
         )}
       </div>
 
-      <div className="flex w-full max-w-4xl items-center justify-between text-xs text-[#8a94a6]">
+      <div className="flex w-full max-w-[1280px] flex-wrap items-center justify-center gap-2">
+        {CONTROLS.map(({ key, label, flag, ...rest }) => {
+          const active = (heldIntents & flag) !== 0;
+          const emphasis = "emphasis" in rest && rest.emphasis;
+          return (
+            <div
+              key={key}
+              className={[
+                "flex min-w-[92px] flex-col items-center gap-1 rounded-lg border px-3 py-2 transition-colors duration-75",
+                active
+                  ? "border-[#4ecdc4] bg-[#4ecdc4] text-[#0b0e14]"
+                  : emphasis
+                    ? "border-[#4ecdc4]/60 bg-[#4ecdc4]/10 text-[#e8edf5]"
+                    : "border-white/10 bg-white/5 text-[#8a94a6]",
+              ].join(" ")}
+            >
+              <kbd className="font-mono text-sm font-bold">{key}</kbd>
+              <span className="text-[10px] tracking-wide uppercase">{label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex w-full max-w-[1280px] items-center justify-between text-xs text-[#8a94a6]">
         <p>
-          <span className="text-[#e8edf5]">A</span>/<span className="text-[#e8edf5]">D</span> move
-          · <span className="text-[#e8edf5]">W</span> jump ·{" "}
-          <span className="text-[#e8edf5]">S</span> crouch ·{" "}
-          <span className="text-[#e8edf5]">Shift</span> slide ·{" "}
-          <span className="text-[#e8edf5]">J</span> attack ·{" "}
-          <span className="text-[#e8edf5]">K</span> block ·{" "}
-          <span className="text-[#e8edf5]">L</span> stun
+          Press <span className="font-bold text-[#4ecdc4]">K</span> the moment a goblin&apos;s
+          swing lands — not when its wind-up bar starts.
         </p>
         <label className="flex cursor-pointer items-center gap-2 select-none">
           <input type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} />
