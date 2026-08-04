@@ -299,10 +299,12 @@ def walk(n=12):
 
 
 def attack_a(n=6):
-    """Overhead cut: wind up past the shoulder, then down and through."""
+    """Horizontal slash: the blade is drawn back across the body, then swept
+    flat through the target. Reads completely differently from the rising
+    sweep, which is the point of having two."""
     poses = [
-        (-115, CX - 6, 44, -2), (-95, CX - 3, 38, -2), (-30, CX + 10, 42, 2),
-        (20, CX + 15, 52, 3), (55, CX + 13, 60, 1), (70, CX + 12, 61, 0),
+        (-170, CX - 8, 52, -3), (-160, CX - 5, 50, -2), (-40, CX + 8, 49, 2),
+        (0, CX + 16, 50, 4), (15, CX + 15, 52, 2), (35, CX + 12, 56, 0),
     ]
     return [
         frame(CX + 7 + ln, CX - 8 + ln, (hx, hy), (CX - 10 + ln, 58), ang,

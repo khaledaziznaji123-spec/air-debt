@@ -34,7 +34,7 @@ const CONTROLS = [
   { key: "D", label: "Right", flag: Intent.Right },
   { key: "W", label: "Jump", flag: Intent.Jump },
   { key: "S", label: "Crouch", flag: Intent.Crouch },
-  { key: "Shift", label: "Slide", flag: Intent.Slide },
+  { key: "F", label: "Slide", flag: Intent.Slide },
   { key: "Q", label: "Attack", flag: Intent.Attack },
   { key: "R", label: "Block / Parry", flag: Intent.Block, emphasis: true },
   { key: "L", label: "Stun", flag: Intent.Stun },

@@ -489,23 +489,36 @@ export class Renderer {
     if (p.action.kind === "block") {
       const parrying = p.action.elapsed < tuning.combat.parryWindow;
       const f = p.facing;
-      const guardX = x + f * 15;
-      const top = y - h * 0.95;
-      const bottom = y - h * 0.15;
 
-      // The blade itself, held vertically across the body.
+      // He carries a SHORT sword, so the guard is an arm raised high with a
+      // stubby blade angled across the face — not a longsword held like a
+      // fencepost. Blade length here matches the sprite's.
+      const shoulder = { x: x + f * 4, y: y - h * 0.72 };
+      const hand = { x: x + f * 13, y: y - h * 0.82 };
+      const tip = { x: x + f * 9, y: y - h * 1.06 };
+
+      // Raised forearm.
       this.playerGfx
-        .moveTo(guardX, top)
-        .lineTo(guardX - f * 3, bottom)
+        .moveTo(shoulder.x, shoulder.y)
+        .lineTo(hand.x, hand.y)
+        .stroke({
+          width: 5,
+          color: parrying ? 0xd8e2ec : COLOR.playerDashing,
+          alpha: parrying ? 0.9 : 0.45,
+        });
+      // The short blade, angled back over the head.
+      this.playerGfx
+        .moveTo(hand.x, hand.y)
+        .lineTo(tip.x, tip.y)
         .stroke({
           width: parrying ? 6 : 4,
           color: parrying ? COLOR.parryFlash : COLOR.playerDashing,
           alpha: parrying ? 1 : 0.55,
         });
-      // Crossguard, so it reads as a sword rather than a bar.
+      // Crossguard at the hand, so it reads as a sword rather than a stick.
       this.playerGfx
-        .moveTo(guardX - f * 8, y - h * 0.42)
-        .lineTo(guardX + f * 7, y - h * 0.46)
+        .moveTo(hand.x - f * 4, hand.y - 4)
+        .lineTo(hand.x + f * 5, hand.y + 2)
         .stroke({
           width: 3,
           color: parrying ? 0xf4d59a : COLOR.playerDashing,
@@ -513,12 +526,12 @@ export class Renderer {
         });
 
       if (parrying) {
-        // A glint running down the edge only while the window is live, so the
-        // "now" is unmistakable at a glance.
+        // A glint along the edge only while the window is live, so the "now"
+        // is unmistakable at a glance.
         this.playerGfx
-          .moveTo(guardX + f * 2, top + 4)
-          .lineTo(guardX - f * 1, bottom - 10)
-          .stroke({ width: 2, color: 0xffffff, alpha: 0.9 });
+          .moveTo(hand.x + f * 1, hand.y - 3)
+          .lineTo(tip.x + f * 1, tip.y + 2)
+          .stroke({ width: 2, color: 0xffffff, alpha: 0.95 });
       }
     }
   }
@@ -567,14 +580,18 @@ export class Renderer {
   ): void {
     const reach = tuning.player.attackReach;
 
-    // A: an overhead chop — steep, tight, sweeping downward.
-    // B: a rising sweep — wide, flat, travelling up from low.
+    // A: a horizontal slash — flattened almost to a straight line and driven
+    //    forward, so it reads as cutting ACROSS rather than chopping down.
+    // B: a rising sweep — wide, tall, travelling up from low.
+    // `flatten` squashes the arc vertically, which is what separates a level
+    // cut from a swing; without it every arc looks like the same crescent.
     const shape =
       variant === 0
         ? {
-            from: -1.35 + progress * 1.75,
-            spread: 1.35,
-            radius: reach,
+            from: -0.5 + progress * 0.45,
+            spread: 1.0,
+            radius: reach * 1.05,
+            flatten: 0.32,
             lift: 0,
             core: 0xfff3c4,
             mid: 0xf4d59a,
@@ -585,6 +602,7 @@ export class Renderer {
             from: 1.15 - progress * 1.9,
             spread: 1.7,
             radius: reach * 1.12,
+            flatten: 1,
             lift: 10,
             core: 0xffffff,
             mid: 0xd6e6f2,
@@ -603,7 +621,7 @@ export class Renderer {
       for (let i = 0; i <= steps; i++) {
         const a = shape.from + (shape.spread * i) / steps;
         const px = x + Math.cos(a) * r * facing;
-        const py = y + Math.sin(a) * r + shape.lift;
+        const py = y + Math.sin(a) * r * shape.flatten + shape.lift;
         if (i === 0) this.playerGfx.moveTo(px, py);
         else this.playerGfx.lineTo(px, py);
       }

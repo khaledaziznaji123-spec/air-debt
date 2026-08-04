@@ -116,3 +116,31 @@ test("Q attacks, and J still does too", () => {
     );
   }
 });
+
+test("F slides, and Shift still does too", () => {
+  for (const code of ["KeyF", "ShiftLeft"]) {
+    const w = fakeWindow();
+    const input = new KeyboardInput();
+    input.attach(w as unknown as Window);
+    w.fire("keydown", code);
+    assert.equal(
+      input.read() & Intent.Slide,
+      Intent.Slide,
+      `${code} should slide`,
+    );
+  }
+});
+
+test("R parries, and K still does too", () => {
+  for (const code of ["KeyR", "KeyK"]) {
+    const w = fakeWindow();
+    const input = new KeyboardInput();
+    input.attach(w as unknown as Window);
+    w.fire("keydown", code);
+    assert.equal(
+      input.read() & Intent.Block,
+      Intent.Block,
+      `${code} should block`,
+    );
+  }
+});
