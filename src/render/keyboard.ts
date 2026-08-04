@@ -23,6 +23,7 @@ export const DEFAULT_BINDINGS: Bindings = {
   KeyS: Intent.Crouch,
   ShiftLeft: Intent.Slide,
   ShiftRight: Intent.Slide,
+  KeyQ: Intent.Attack,
   KeyJ: Intent.Attack,
   KeyK: Intent.Block,
   KeyL: Intent.Stun,

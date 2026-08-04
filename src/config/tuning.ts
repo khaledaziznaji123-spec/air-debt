@@ -100,12 +100,19 @@ export const tuning = {
     maxHp: 100,
     /** Sword damage per connecting hit. */
     attackDamage: 34,
-    /** Reach ahead of the player's facing edge. */
-    attackReach: 40,
+    /** Reach ahead of the player's facing edge — matches the blade's extension. */
+    attackReach: 56,
+    /**
+     * The attack box is the SWORD, not the body: a horizontal band at the
+     * height the blade sweeps, given as fractions of player height measured up
+     * from the feet. Swinging at someone's ankles should not connect.
+     */
+    attackBoxTop: 0.78,
+    attackBoxBottom: 0.28,
     /** Ticks into the swing before the hitbox goes live (startup). */
     attackStartup: s(0.1),
     /** How long the hitbox stays live. */
-    attackActive: s(0.08),
+    attackActive: s(0.1),
     /** The stun attack: weak, slow, and the only guard-breaker (FR-5.6). */
     stunDamage: 8,
     stunStartup: s(0.3),

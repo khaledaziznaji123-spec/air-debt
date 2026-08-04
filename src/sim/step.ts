@@ -51,13 +51,26 @@ function enemyBox(e: Enemy): Box {
   };
 }
 
-/** A swing's hitbox, projected ahead of whoever threw it. */
-function swingBox(x: number, y: number, facing: 1 | -1, reach: number, height: number): Box {
+/**
+ * A swing's hitbox, projected ahead of whoever threw it.
+ *
+ * `top` and `bottom` are heights above the feet. For the player this is the
+ * band the blade actually sweeps rather than the whole body — the attack box is
+ * the sword, so a swing does not connect with someone's ankles.
+ */
+function swingBox(
+  x: number,
+  y: number,
+  facing: 1 | -1,
+  reach: number,
+  top: number,
+  bottom = 0,
+): Box {
   return {
     left: facing > 0 ? x : x - reach,
     right: facing > 0 ? x + reach : x,
-    top: y - height,
-    bottom: y,
+    top: y - top,
+    bottom: y - bottom,
   };
 }
 
@@ -86,12 +99,26 @@ export function playerHitbox(p: Player): Box | null {
   if (p.action.kind === "attack") {
     const t = p.action.elapsed;
     if (t < BODY.attackStartup || t >= BODY.attackStartup + BODY.attackActive) return null;
-    return swingBox(p.x, p.y, p.facing, BODY.attackReach, BODY.height);
+    return swingBox(
+      p.x,
+      p.y,
+      p.facing,
+      BODY.attackReach,
+      BODY.height * BODY.attackBoxTop,
+      BODY.height * BODY.attackBoxBottom,
+    );
   }
   if (p.action.kind === "stun") {
     const t = p.action.elapsed;
     if (t < BODY.stunStartup || t >= BODY.stunStartup + BODY.stunActive) return null;
-    return swingBox(p.x, p.y, p.facing, BODY.stunReach, BODY.height);
+    return swingBox(
+      p.x,
+      p.y,
+      p.facing,
+      BODY.stunReach,
+      BODY.height * BODY.attackBoxTop,
+      BODY.height * BODY.attackBoxBottom,
+    );
   }
   return null;
 }
@@ -269,6 +296,8 @@ export function step(state: SimState, intents: Intents): SimState {
   const parrying = isParrying(player);
   enemies = enemies.map((e) => {
     if (e.phase !== "striking" || e.phaseTicks !== 0) return e;
+    // The goblin's swing covers its full height — it is a wild lunge, not a
+    // measured cut, and a taller player should not be able to duck it for free.
     const eSwing = swingBox(e.x, e.y, e.facing, GOBLIN.reach, GOBLIN.height);
     if (!overlaps(eSwing, pBox)) return e;
 

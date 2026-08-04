@@ -29,7 +29,7 @@ const CONTROLS = [
   { key: "W", label: "Jump", flag: Intent.Jump },
   { key: "S", label: "Crouch", flag: Intent.Crouch },
   { key: "Shift", label: "Slide", flag: Intent.Slide },
-  { key: "J", label: "Attack", flag: Intent.Attack },
+  { key: "Q", label: "Attack", flag: Intent.Attack },
   { key: "K", label: "Block / Parry", flag: Intent.Block, emphasis: true },
   { key: "L", label: "Stun", flag: Intent.Stun },
 ] as const;

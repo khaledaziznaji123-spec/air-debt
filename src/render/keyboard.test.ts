@@ -97,3 +97,13 @@ test("moving does not prevent attacking", () => {
   assert.equal(state.player.action.kind, "attack", "running and swinging must compose");
   assert.ok(state.player.vx > 0);
 });
+
+test("Q attacks, and J still does too", () => {
+  for (const code of ["KeyQ", "KeyJ"]) {
+    const w = fakeWindow();
+    const input = new KeyboardInput();
+    input.attach(w as unknown as Window);
+    w.fire("keydown", code);
+    assert.equal(input.read() & Intent.Attack, Intent.Attack, `${code} should attack`);
+  }
+});
