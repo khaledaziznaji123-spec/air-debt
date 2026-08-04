@@ -352,10 +352,12 @@ def crouch_walk(n=6):
 
 def slide(n=3):
     """Committed forward dive — the trailing leg extends, the blade drags."""
-    poses = [(14, 16, 100), (20, 20, 112), (16, 18, 104)]
+    # Almost flat: the body drops nearly to the floor and the lead leg reaches
+    # right out, so it reads as a dive rather than a deep crouch.
+    poses = [(19, 24, 96), (26, 30, 104), (22, 27, 100)]
     return [
-        frame(CX + fwd, CX - 12, (CX + 4, 74), (CX - 14, 68), ang,
-              squat=sq, lean=5)
+        frame(CX + fwd, CX - 14, (CX + 2, 82), (CX - 16, 76), ang,
+              squat=sq, lean=8)
         for fwd, sq, ang in poses
     ]
 

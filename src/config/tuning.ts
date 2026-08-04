@@ -68,14 +68,14 @@ export const tuning = {
     runSpeed: 3.2,
     /** Upward impulse applied on the jump tick. Tall enough to clear a goblin
      *  and to give the smash-down a real drop to fall through. */
-    jumpImpulse: 15.5,
+    jumpImpulse: 14.2,
     /** Downward acceleration per tick. */
     gravity: 0.55,
     /** Terminal fall speed, so a long drop stays predictable. */
     maxFallSpeed: 16,
     /** Slide: forward burst speed and how long it lasts (FR-5.2). */
-    slideSpeed: 6.4,
-    slideDuration: s(0.25),
+    slideSpeed: 8.8,
+    slideDuration: s(0.42),
     /** Backstep: the standing / mid-attack variant of the same button. */
     backstepSpeed: 5.0,
     backstepDuration: s(0.15),

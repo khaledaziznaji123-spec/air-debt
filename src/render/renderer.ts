@@ -302,16 +302,9 @@ export class Renderer {
     for (const e of state.enemies) {
       if (e.phase === "dead") continue;
       if (hasArt) {
-        // Art is drawn by the sprites above; still show the tell and health.
-        if (e.phase === "telegraphing") {
-          const t = e.phaseTicks / tuning.enemies.goblin.telegraph;
-          this.enemyGfx
-            .rect(e.x - width / 2, e.y - height - 12, width, 4)
-            .fill({ color: 0xffffff, alpha: 0.15 });
-          this.enemyGfx
-            .rect(e.x - width / 2, e.y - height - 12, width * t, 4)
-            .fill(COLOR.enemyTelegraph);
-        }
+        // No wind-up bar. The tell is the ANIMATION — reared back, cleaver
+        // overhead, eyes lit — and a progress bar above its head does the
+        // reading for you, which is the skill the game is asking for.
         if (e.hp < maxHp) {
           this.enemyGfx
             .rect(e.x - width / 2, e.y - height - 5, width * (e.hp / maxHp), 3)
@@ -335,16 +328,8 @@ export class Renderer {
         .rect(e.x - width / 2, e.y - height, width, height)
         .fill(colour);
 
-      // Wind-up bar, so the tell is legible before there is animation to carry it.
-      if (e.phase === "telegraphing") {
-        const t = e.phaseTicks / tuning.enemies.goblin.telegraph;
-        this.enemyGfx
-          .rect(e.x - width / 2, e.y - height - 12, width, 4)
-          .fill({ color: 0xffffff, alpha: 0.15 });
-        this.enemyGfx
-          .rect(e.x - width / 2, e.y - height - 12, width * t, 4)
-          .fill(COLOR.enemyTelegraph);
-      }
+      // No wind-up bar here either. This path only runs when the art failed to
+      // load, and the colour change above already carries the tell.
 
       // Health, only once hurt — no clutter on a full-health room.
       if (e.hp < maxHp) {

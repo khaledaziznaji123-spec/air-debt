@@ -265,3 +265,45 @@ test("jump then down commits to a smash and lands with a wide impact", () => {
     "it hits both sides",
   );
 });
+
+test("a goblin is solid — you cannot walk through it", () => {
+  let s = duel();
+  const goblinX = s.enemies[0].x;
+  for (let i = 0; i < 120; i++) s = step(s, Intent.Right);
+  assert.ok(
+    s.player.x + tuning.player.width / 2 <=
+      goblinX + tuning.enemies.goblin.width / 2 + 1,
+    "the player should be stopped at the goblin's body",
+  );
+});
+
+test("sliding passes through a goblin", () => {
+  let s = duel();
+  // Get moving, then dash.
+  s = run(s, 6, Intent.Right);
+  const before = s.player.x;
+  s = step(s, Intent.Right | Intent.Slide);
+  s = run(s, tuning.movement.slideDuration, Intent.Right);
+  assert.ok(
+    s.player.x > s.enemies[0].x,
+    "a slide should carry the player past the goblin, not bounce off it",
+  );
+  assert.ok(s.player.x > before);
+});
+
+test("jumping clears a goblin's head", () => {
+  let s = duel();
+  s = step(s, Intent.Jump);
+  // Rise until the feet are above the goblin's head.
+  for (let i = 0; i < 30; i++) {
+    s = step(s, Intent.Jump | Intent.Right);
+    if (s.player.y <= s.enemies[0].y - tuning.enemies.goblin.height) break;
+  }
+  assert.ok(
+    s.player.y <= s.enemies[0].y - tuning.enemies.goblin.height,
+    "the jump must actually reach above the goblin",
+  );
+  const overhead = s.player.x;
+  s = run(s, 6, Intent.Right);
+  assert.ok(s.player.x > overhead, "and movement must not be blocked up there");
+});

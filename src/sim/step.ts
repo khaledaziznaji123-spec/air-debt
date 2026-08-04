@@ -348,6 +348,33 @@ export function step(state: SimState, intents: Intents): SimState {
           ? "crouching"
           : "grounded";
 
+  // Bodies are solid: you cannot walk through a goblin. Two ways past, and
+  // both fall out of the geometry rather than being special-cased —
+  //   SLIDE: a dash passes through, so it is an escape as well as a dodge
+  //   JUMP:  clear its head and the boxes never overlap in the first place
+  if (stance !== "sliding" && stance !== "backstepping") {
+    const playerHeight =
+      stance === "crouching"
+        ? BODY.height * MOVE.crouchHeightScale
+        : BODY.height;
+    for (const e of state.enemies) {
+      if (e.phase === "dead") continue;
+      const eLeft = e.x - GOBLIN.width / 2;
+      const eRight = e.x + GOBLIN.width / 2;
+      const eTop = e.y - GOBLIN.height;
+      // No vertical overlap means no collision — this is what lets a jump clear it.
+      if (y - playerHeight >= e.y || y <= eTop) continue;
+      if (x + half <= eLeft || x - half >= eRight) continue;
+      // Push out along whichever side is nearer, so you slide off rather than
+      // teleporting across.
+      const outLeft = eLeft - (x + half);
+      const outRight = eRight - (x - half);
+      x += Math.abs(outLeft) < Math.abs(outRight) ? outLeft : outRight;
+      if (x < half) x = half;
+      if (x > ROOM.width - half) x = ROOM.width - half;
+    }
+  }
+
   const player: Player = {
     x,
     y,
