@@ -15,7 +15,7 @@ import type { SimState } from "./types.ts";
 export { Intent, has, add, remove, pressed } from "./intents.ts";
 export type { Intents, InputRecord, IntentFlag } from "./intents.ts";
 export { createRng, deriveSeed, type Rng } from "./rng.ts";
-export { step, isParrying } from "./step.ts";
+export { step, isParrying, playerHitbox, type Box } from "./step.ts";
 export type {
   SimState,
   Player,
@@ -54,7 +54,9 @@ export function createInitialState(airTicks: number = tuning.air.base): SimState
     tick: 0,
     air: airTicks,
     airCapacity: airTicks,
-    enemies: [goblin(820), goblin(1080)],
+    // Close enough that the first exchange happens within a couple of seconds —
+    // at a 30-second base tank, walking to the fight is most of the run.
+    enemies: [goblin(560), goblin(920)],
     events: [],
     player: {
       x: tuning.room.playerSpawnX,

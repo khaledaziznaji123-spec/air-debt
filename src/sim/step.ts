@@ -26,7 +26,7 @@ const {
 const FLOOR = ROOM.floorY;
 const GOBLIN = ENEMY.goblin;
 
-type Box = { left: number; right: number; top: number; bottom: number };
+export type Box = { left: number; right: number; top: number; bottom: number };
 
 function overlaps(a: Box, b: Box): boolean {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -77,8 +77,12 @@ export function isParrying(p: Player): boolean {
   return p.action.kind === "block" && p.action.elapsed < COMBAT.parryWindow;
 }
 
-/** Live frames of the player's own swing, by action kind. */
-function playerHitbox(p: Player): Box | null {
+/**
+ * Live frames of the player's own swing, by action kind.
+ * Exported so the renderer can draw exactly what the sim resolves — a swing the
+ * player cannot see is a swing they will not believe happened.
+ */
+export function playerHitbox(p: Player): Box | null {
   if (p.action.kind === "attack") {
     const t = p.action.elapsed;
     if (t < BODY.attackStartup || t >= BODY.attackStartup + BODY.attackActive) return null;

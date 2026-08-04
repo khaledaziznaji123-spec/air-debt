@@ -10,9 +10,10 @@
  * rendering concern that must never feed back into the core.
  */
 
-import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
+import { Application, Container, Graphics, Sprite, Text, TextStyle, TilingSprite } from "pixi.js";
 import { tuning } from "../config/tuning.ts";
-import type { SimState } from "../sim/index.ts";
+import { playerHitbox, type SimState } from "../sim/index.ts";
+import { SpriteSet } from "./sprites.ts";
 
 const COLOR = {
   sky: 0x0b0e14,
@@ -29,6 +30,7 @@ const COLOR = {
   enemyStriking: 0xe56b6f,
   enemyStaggered: 0x4ecdc4,
   parryFlash: 0xffffff,
+  swing: 0xf4a259,
 } as const;
 
 /** The last ten seconds, when the vignette starts closing in (PRD FR-1.2). */
@@ -47,9 +49,15 @@ export class Renderer {
   private airText: Text;
   private debugText: Text;
   private debug = false;
+  private art: SpriteSet;
+  /** One sprite per enemy, reused across ticks rather than rebuilt. */
+  private enemySprites: Sprite[] = [];
+  private playerSprite: Sprite | null = null;
+  private floorTile: TilingSprite | null = null;
 
-  private constructor(app: Application) {
+  private constructor(app: Application, art: SpriteSet) {
     this.app = app;
+    this.art = art;
 
     const hudStyle = new TextStyle({
       fontFamily: "ui-monospace, Menlo, Consolas, monospace",
@@ -91,7 +99,10 @@ export class Renderer {
       autoDensity: true,
       resolution: Math.min(globalThis.devicePixelRatio ?? 1, 2),
     });
-    return new Renderer(app);
+    // Art is optional — a missing file falls back to placeholder shapes, so
+    // the game stays playable while it is still being drawn (ARCH AD-16).
+    const art = await SpriteSet.load();
+    return new Renderer(app, art);
   }
 
   setDebug(on: boolean): void {
@@ -132,12 +143,27 @@ export class Renderer {
         `facing   ${p.facing > 0 ? "right" : "left"}`,
         `action   ${p.action.kind ?? "-"} (lockout ${p.action.lockout})`,
         `outcome  ${state.outcome}`,
+        "",
+        `art      ${this.art.loaded.size}/4 loaded`,
+        ...this.art.issues.map((w) => `  ! ${w}`),
       ].join("\n");
     }
   }
 
   private drawFloor(): void {
     const { floorY, width } = tuning.room;
+    const tile = this.art.get("tile.floor");
+
+    if (tile) {
+      if (!this.floorTile) {
+        this.floorTile = new TilingSprite({ texture: tile, width, height: 720 - floorY });
+        this.floorTile.position.set(0, floorY);
+        this.world.addChildAt(this.floorTile, 0);
+      }
+      this.floorGfx.clear();
+      return;
+    }
+
     this.floorGfx.clear();
     this.floorGfx.rect(0, floorY, width, 720 - floorY).fill(COLOR.floor);
   }
@@ -145,8 +171,54 @@ export class Renderer {
   private drawEnemies(state: SimState): void {
     const { width, height, maxHp } = tuning.enemies.goblin;
     this.enemyGfx.clear();
+
+    const idleArt = this.art.get("enemy.goblin.idle");
+    const windupArt = this.art.get("enemy.goblin.windup");
+    const hasArt = idleArt !== null;
+
+    // Keep one Sprite per enemy slot rather than churning objects each frame.
+    while (hasArt && this.enemySprites.length < state.enemies.length) {
+      const s = new Sprite();
+      s.anchor.set(0.5, 1); // feet on the ground, like the hurtbox
+      this.world.addChild(s);
+      this.enemySprites.push(s);
+    }
+
+    state.enemies.forEach((e, i) => {
+      const sprite = this.enemySprites[i];
+      if (sprite) {
+        sprite.visible = hasArt && e.phase !== "dead";
+        if (sprite.visible) {
+          // The wind-up pose is what the player is reading — use it whenever
+          // the goblin is committed, not only during the telegraph itself.
+          const committed = e.phase === "telegraphing" || e.phase === "striking";
+          sprite.texture = (committed ? (windupArt ?? idleArt) : idleArt)!;
+          sprite.position.set(e.x, e.y);
+          sprite.scale.x = e.facing;
+        }
+      }
+    });
+
     for (const e of state.enemies) {
       if (e.phase === "dead") continue;
+      if (hasArt) {
+        // Art is drawn by the sprites above; still show the tell and health.
+        if (e.phase === "telegraphing") {
+          const t = e.phaseTicks / tuning.enemies.goblin.telegraph;
+          this.enemyGfx
+            .rect(e.x - width / 2, e.y - height - 12, width, 4)
+            .fill({ color: 0xffffff, alpha: 0.15 });
+          this.enemyGfx
+            .rect(e.x - width / 2, e.y - height - 12, width * t, 4)
+            .fill(COLOR.enemyTelegraph);
+        }
+        if (e.hp < maxHp) {
+          this.enemyGfx
+            .rect(e.x - width / 2, e.y - height - 5, width * (e.hp / maxHp), 3)
+            .fill(COLOR.enemyStriking);
+        }
+        continue;
+      }
 
       // The telegraph has to be loud — a wind-up the player cannot read makes
       // the parry unfair, which breaks the whole design (PRD FR-6.1).
@@ -196,10 +268,53 @@ export class Renderer {
             : COLOR.player;
 
     this.playerGfx.clear();
-    // Hurtbox, drawn from the feet up — the sprite will hang off this later.
-    this.playerGfx.rect(x - width / 2, y - h, width, h).fill(colour);
-    // A facing tick, so direction is readable before there is art.
-    this.playerGfx.rect(x + (p.facing > 0 ? width / 2 : -width / 2 - 6), y - h * 0.7, 6, 4).fill(colour);
+
+    const playerArt = this.art.get("player.idle");
+    if (playerArt) {
+      if (!this.playerSprite) {
+        this.playerSprite = new Sprite(playerArt);
+        this.playerSprite.anchor.set(0.5, 1);
+        this.world.addChild(this.playerSprite);
+      }
+      this.playerSprite.position.set(x, y);
+      this.playerSprite.scale.x = p.facing;
+      // Tint carries state until there are per-action poses to carry it.
+      this.playerSprite.tint = colour === COLOR.player ? 0xffffff : colour;
+    } else {
+      // Hurtbox, drawn from the feet up — the sprite will hang off this later.
+      this.playerGfx.rect(x - width / 2, y - h, width, h).fill(colour);
+      // A facing tick, so direction is readable before there is art.
+      this.playerGfx
+        .rect(x + (p.facing > 0 ? width / 2 : -width / 2 - 6), y - h * 0.7, 6, 4)
+        .fill(colour);
+    }
+
+    // The swing itself. Without this, attacking reads as nothing happening —
+    // the player has no way to know the game registered the press.
+    const swing = playerHitbox(p);
+    if (swing) {
+      const dx = x - p.x; // follow the interpolated body
+      this.playerGfx
+        .rect(swing.left + dx, swing.top, swing.right - swing.left, swing.bottom - swing.top)
+        .fill({ color: COLOR.swing, alpha: 0.55 });
+    } else if (p.action.kind === "attack" || p.action.kind === "stun") {
+      // Wind-up and recovery, shown faintly so commitment is visible too.
+      const reach = p.action.kind === "stun" ? tuning.player.stunReach : tuning.player.attackReach;
+      const left = p.facing > 0 ? x : x - reach;
+      this.playerGfx
+        .rect(left, y - h * 0.8, reach, 6)
+        .fill({ color: COLOR.swing, alpha: 0.18 });
+    }
+
+    // Block: the parry window and the punish tail must look different, because
+    // they are the whole skill (PRD FR-5.7 / FR-5.9).
+    if (p.action.kind === "block") {
+      const parrying = p.action.elapsed < tuning.combat.parryWindow;
+      const r = parrying ? 40 : 30;
+      this.playerGfx
+        .circle(x, y - h / 2, r)
+        .stroke({ width: parrying ? 4 : 2, color: parrying ? COLOR.parryFlash : COLOR.playerDashing, alpha: parrying ? 0.95 : 0.4 });
+    }
   }
 
   private drawAir(state: SimState): void {
