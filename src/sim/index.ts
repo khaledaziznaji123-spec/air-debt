@@ -61,6 +61,7 @@ export function createInitialState(
     // All inside the cave. Nothing waits for you in the open.
     enemies: [goblin(700), goblin(1010)],
     entered: false,
+    deepestX: tuning.room.entranceX,
     events: [],
     player: {
       x: tuning.room.playerSpawnX,

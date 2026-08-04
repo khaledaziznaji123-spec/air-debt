@@ -21,6 +21,7 @@ import {
 import { KeyboardInput } from "@/render/keyboard";
 import { Renderer } from "@/render/renderer";
 import { TICK_HZ, tuning } from "@/config/tuning";
+import Shop from "./shop";
 
 const MS_PER_TICK = 1000 / TICK_HZ;
 
@@ -50,6 +51,8 @@ export default function Game() {
   const [runKey, setRunKey] = useState(0);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [heldIntents, setHeldIntents] = useState(0);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [depthReached, setDepthReached] = useState(0);
   // Mirrored into a ref so the render loop can read the latest value without
   // being torn down and rebuilt every time the toggle flips.
   const debugRef = useRef(debug);
@@ -121,6 +124,9 @@ export default function Game() {
         renderer?.setDebug(debugRef.current);
         renderer?.draw(state, previous, Math.min(accumulator / MS_PER_TICK, 1));
         setOutcome(state.outcome);
+        setDepthReached(
+          Math.max(0, Math.round(state.deepestX - tuning.room.entranceX)),
+        );
       };
 
       raf = requestAnimationFrame(frame);
@@ -133,6 +139,10 @@ export default function Game() {
       renderer?.destroy();
     };
   }, [runKey]);
+
+  // A display value only: the server computes the real reward (ARCH AD-13).
+  // Loot scales with distance, so depth is what a run is worth.
+  const gemsCarried = Math.floor(depthReached / 40);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#0b0e14] p-6">
@@ -152,25 +162,78 @@ export default function Game() {
             </code>
           </div>
         )}
-        {!renderError && outcome !== "running" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-lg bg-black/70">
-            <p className="text-3xl font-bold text-[#e8edf5]">
-              {outcome === "transformed"
-                ? "You breathed the virus."
-                : "You died."}
-            </p>
-            <p className="text-sm text-[#8a94a6]">
-              {outcome === "transformed"
-                ? "The air ran out. You are one of them now."
-                : "Killed in the dungeon."}
-            </p>
-            <button
-              onClick={() => setRunKey((k) => k + 1)}
-              className="rounded bg-[#4ecdc4] px-5 py-2 font-semibold text-[#0b0e14] transition hover:brightness-110"
+        {!renderError && outcome !== "running" && !shopOpen && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-lg bg-black/75">
+            <p
+              className={`text-3xl font-bold ${
+                outcome === "extracted" ? "text-[#4ecdc4]" : "text-[#e8edf5]"
+              }`}
             >
-              Run again
-            </button>
+              {outcome === "extracted"
+                ? "Escaped the dungeon."
+                : outcome === "transformed"
+                  ? "You breathed the virus."
+                  : "You died."}
+            </p>
+            <p className="max-w-md text-center text-sm text-[#8a94a6]">
+              {outcome === "extracted"
+                ? "You made it out with what you were carrying."
+                : outcome === "transformed"
+                  ? "The air ran out. You are one of them now."
+                  : "Killed in the dungeon. The run's loot stays down there."}
+            </p>
+
+            {/* Depth is the run's whole value: loot scales with distance. */}
+            <div className="flex gap-8 py-1 text-center">
+              <div>
+                <p className="font-mono text-2xl font-bold text-[#e8edf5]">
+                  {depthReached}m
+                </p>
+                <p className="text-[10px] tracking-widest text-[#8a94a6] uppercase">
+                  depth
+                </p>
+              </div>
+              <div>
+                <p
+                  className={`font-mono text-2xl font-bold ${
+                    outcome === "extracted"
+                      ? "text-[#4ecdc4]"
+                      : "text-[#e56b6f]"
+                  }`}
+                >
+                  {outcome === "extracted" ? gemsCarried : 0}
+                </p>
+                <p className="text-[10px] tracking-widest text-[#8a94a6] uppercase">
+                  gems {outcome === "extracted" ? "banked" : "lost"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShopOpen(false);
+                  setRunKey((k) => k + 1);
+                }}
+                className="rounded bg-[#4ecdc4] px-5 py-2 font-semibold text-[#0b0e14] transition hover:brightness-110"
+              >
+                Run again
+              </button>
+              <button
+                onClick={() => setShopOpen(true)}
+                className="rounded border border-[#4ecdc4]/50 px-5 py-2 font-semibold text-[#4ecdc4] transition hover:bg-[#4ecdc4]/10"
+              >
+                Shop
+              </button>
+            </div>
           </div>
+        )}
+
+        {!renderError && shopOpen && (
+          <Shop
+            gems={outcome === "extracted" ? gemsCarried : 0}
+            onClose={() => setShopOpen(false)}
+          />
         )}
       </div>
 

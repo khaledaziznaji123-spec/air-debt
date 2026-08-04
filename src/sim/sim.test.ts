@@ -6,9 +6,19 @@ import type { InputRecord } from "./intents.ts";
 import { tuning } from "../config/tuning.ts";
 import type { SimState } from "./types.ts";
 
-/** A run already underway — air only burns once the cave has been entered. */
+/**
+ * A run already underway: entered, and standing INSIDE. Marking a state
+ * entered while it sits at the spawn would extract on the very next tick,
+ * because walking back out of the mouth is what ends a run.
+ */
 function started(airTicks?: number): SimState {
-  return { ...createInitialState(airTicks), entered: true };
+  const base = createInitialState(airTicks);
+  return {
+    ...base,
+    entered: true,
+    player: { ...base.player, x: tuning.room.entranceX + 120 },
+    deepestX: tuning.room.entranceX + 120,
+  };
 }
 
 /**
@@ -103,7 +113,9 @@ test("a finished run is a fixed point", () => {
 });
 
 test("the player cannot leave the room", () => {
-  let state = started(6000);
+  // Deliberately NOT entered: walking back out of the mouth would end the run
+  // before the left-hand wall was ever reached.
+  let state = createInitialState(6000);
   for (let i = 0; i < 2000; i++) state = step(state, Intent.Left);
   assert.ok(state.player.x >= tuning.player.width / 2);
   for (let i = 0; i < 4000; i++) state = step(state, Intent.Right);

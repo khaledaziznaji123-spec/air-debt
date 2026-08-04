@@ -29,13 +29,18 @@ function run(
  */
 function duel(): SimState {
   const base = createInitialState(60 * 60);
+  // Inside the cave, well clear of the mouth — standing on the threshold would
+  // extract the moment the fight pushed the player back a step.
+  const x = tuning.room.entranceX + 160;
   return {
     ...base,
     entered: true,
+    deepestX: x,
+    player: { ...base.player, x },
     enemies: [
       {
         ...base.enemies[0],
-        x: base.player.x + GOBLIN.attackRange - 2,
+        x: x + GOBLIN.attackRange - 2,
         facing: -1,
       },
     ],
@@ -355,4 +360,31 @@ test("every goblin starts inside the cave", () => {
       "monsters belong to the dungeon, not the approach",
     );
   }
+});
+
+test("walking back out of the mouth extracts you", () => {
+  let s = createInitialState(600);
+  // In.
+  for (let i = 0; i < 200 && !s.entered; i++) s = step(s, Intent.Right);
+  assert.equal(s.entered, true);
+  s = run(s, 40, Intent.Right);
+  const depth = s.deepestX;
+  assert.ok(depth > tuning.room.entranceX, "should have made some ground");
+
+  // Back out.
+  for (let i = 0; i < 300 && s.outcome === "running"; i++) {
+    s = step(s, Intent.Left);
+  }
+  assert.equal(s.outcome, "extracted", "leaving is always available and free");
+  assert.equal(s.deepestX, depth, "and the depth reached is what was banked");
+});
+
+test("depth only counts ground made inside", () => {
+  let s = createInitialState(600);
+  for (let i = 0; i < 60; i++) s = step(s, Intent.None);
+  assert.equal(
+    s.deepestX,
+    tuning.room.entranceX,
+    "loitering outside is worth nothing",
+  );
 });

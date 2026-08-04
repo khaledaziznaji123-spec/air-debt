@@ -471,8 +471,20 @@ export function step(state: SimState, intents: Intents): SimState {
   // PRD FR-17: the timer is the air in the mask, so it only runs while the
   // mask is being used. Standing outside costs nothing.
   const air = entered && state.air > 0 ? state.air - 1 : state.air;
+  const deepestX = entered ? Math.max(state.deepestX, x) : state.deepestX;
+
+  // Walking back out of the mouth is an extraction: the run ends and whatever
+  // was carried is banked (PRD FR-4.2). Leaving is always free.
+  const extracted = entered && x <= ROOM.entranceX - 10;
+
   const outcome: SimState["outcome"] =
-    entered && air === 0 ? "transformed" : hp <= 0 ? "died" : "running";
+    entered && air === 0
+      ? "transformed"
+      : hp <= 0
+        ? "died"
+        : extracted
+          ? "extracted"
+          : "running";
 
   return {
     tick: state.tick + 1,
@@ -481,6 +493,7 @@ export function step(state: SimState, intents: Intents): SimState {
     player: { ...player, hp },
     enemies,
     entered,
+    deepestX,
     outcome,
     previousIntents: intents,
     events,

@@ -62,6 +62,7 @@ export class Renderer {
   private fxGfx = new Graphics();
   private floorGfx = new Graphics();
   private caveGfx = new Graphics();
+  private darkGfx = new Graphics();
   private vignette = new Graphics();
   private airBar = new Graphics();
   private healthBar = new Graphics();
@@ -118,6 +119,7 @@ export class Renderer {
       this.playerGfx,
       this.fxGfx,
       this.particles.gfx,
+      this.darkGfx,
     );
     this.app.stage.addChild(
       this.world,
@@ -176,11 +178,12 @@ export class Renderer {
     this.particles.update(dt);
     this.particles.draw();
 
-    this.drawCave(state);
+    this.drawCave();
     this.drawFloor();
     this.drawEnemies(state);
     this.drawPlayer(state, x, y);
     this.drawFx(state);
+    this.drawDarkness(state);
     this.drawAir(state);
     this.drawHealth(state);
     this.drawVignette(state);
@@ -322,63 +325,84 @@ export class Renderer {
   }
 
   /**
-   * The cave mouth. Drawn behind everything, as a dark opening bitten out of a
-   * rock face, with jagged teeth top and bottom so the threshold is obvious
-   * from across the screen.
+   * The cave mouth: a full-height opening in a rock face, floor to ceiling.
    */
-  private drawCave(state: SimState): void {
+  private drawCave(): void {
     const { floorY, entranceX, width } = tuning.room;
     const g = this.caveGfx;
     g.clear();
 
-    const mouthTop = floorY - 250;
-    const rockRight = width;
+    // The dark interior, all the way up.
+    g.rect(entranceX, 0, width - entranceX, floorY).fill(COLOR.caveDark);
 
-    // Rock face filling everything right of the entrance, with the opening cut
-    // out of it. Drawing the wall and then the hole keeps the edge crisp.
-    g.rect(entranceX - 26, mouthTop - 90, rockRight - entranceX + 26, 90).fill(
-      COLOR.rock,
-    );
-    g.rect(entranceX - 26, mouthTop - 90, 26, floorY - mouthTop + 90).fill(
-      COLOR.rock,
-    );
-
-    // The dark interior.
-    g.rect(entranceX, mouthTop, rockRight - entranceX, floorY - mouthTop).fill(
-      COLOR.caveDark,
-    );
-
-    // Stalactites hanging from the lintel, and stumps rising from the floor.
-    for (let i = 0; i < 26; i++) {
-      const n = Renderer.noise(i + 400);
-      const x = entranceX + 10 + n * (rockRight - entranceX - 20);
-      const drop = 12 + Renderer.noise(i + 700) * 46;
-      g.moveTo(x - 7, mouthTop)
-        .lineTo(x, mouthTop + drop)
-        .lineTo(x + 7, mouthTop)
+    // Rock jamb on the outside face, ragged rather than a clean line.
+    g.rect(entranceX - 30, 0, 30, floorY).fill(COLOR.rock);
+    for (let i = 0; i < 34; i++) {
+      const n = Renderer.noise(i + 300);
+      const y = (i / 34) * floorY;
+      const bite = 6 + n * 22;
+      g.moveTo(entranceX, y)
+        .lineTo(entranceX + bite, y + floorY / 34 / 2)
+        .lineTo(entranceX, y + floorY / 34)
         .fill(COLOR.rock);
     }
-    for (let i = 0; i < 10; i++) {
+    g.rect(entranceX - 32, 0, 3, floorY).fill(COLOR.rockLip);
+
+    // Stumps rising from the cave floor, so the threshold has depth.
+    for (let i = 0; i < 12; i++) {
       const n = Renderer.noise(i + 1200);
-      const x = entranceX + 20 + n * (rockRight - entranceX - 40);
-      const rise = 10 + Renderer.noise(i + 1500) * 26;
-      g.moveTo(x - 6, floorY)
+      const x = entranceX + 24 + n * (width - entranceX - 40);
+      const rise = 10 + Renderer.noise(i + 1500) * 30;
+      g.moveTo(x - 7, floorY)
         .lineTo(x, floorY - rise)
-        .lineTo(x + 6, floorY)
+        .lineTo(x + 7, floorY)
         .fill(COLOR.rock);
     }
+  }
 
-    // The jamb itself, lit on the outside face.
-    g.rect(entranceX - 4, mouthTop, 4, floorY - mouthTop).fill(COLOR.rockLip);
+  /**
+   * What you cannot see. The mouth is a boundary of vision, not just geometry:
+   * from outside the dungeon is black, and once you are in, the daylight
+   * behind you closes up. You are never able to see both at once, which is
+   * what makes stepping through feel like a commitment.
+   */
+  private drawDarkness(state: SimState): void {
+    const { entranceX, width } = tuning.room;
+    const g = this.darkGfx;
+    g.clear();
 
-    // Until you step in, the mouth is marked. Once inside, the marker goes —
-    // it is a threshold, not a signpost you keep looking at.
+    const bands = 14;
     if (!state.entered) {
-      const pulse = 0.45 + 0.25 * Math.sin(state.tick / 12);
-      g.rect(entranceX - 2, mouthTop, 3, floorY - mouthTop).fill({
-        color: COLOR.air,
-        alpha: pulse,
+      // Everything past the mouth is unknown. Softened over a short distance
+      // so the edge reads as gloom rather than as a drawn rectangle.
+      const fade = 90;
+      g.rect(entranceX + fade, 0, width - entranceX - fade, 720).fill({
+        color: 0x000000,
+        alpha: 0.97,
       });
+      for (let i = 0; i < bands; i++) {
+        const t = i / bands;
+        g.rect(entranceX + fade * t, 0, fade / bands + 1, 720).fill({
+          color: 0x000000,
+          alpha: 0.97 * t * t,
+        });
+      }
+    } else {
+      // Inside now. The way out is still there — it just is not lit.
+      const fade = 70;
+      g.rect(0, 0, entranceX - fade, 720).fill({
+        color: 0x000000,
+        alpha: 0.92,
+      });
+      for (let i = 0; i < bands; i++) {
+        const t = 1 - i / bands;
+        g.rect(entranceX - fade * t, 0, fade / bands + 1, 720).fill({
+          color: 0x000000,
+          alpha: 0.92 * t * t,
+        });
+      }
+      // A cold sliver at the mouth, so the exit stays findable in a panic.
+      g.rect(entranceX - 3, 0, 2, 720).fill({ color: COLOR.air, alpha: 0.25 });
     }
   }
 

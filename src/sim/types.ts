@@ -101,6 +101,11 @@ export type SimState = {
    * and nothing moves — the clock is the dungeon's, not the game's.
    */
   entered: boolean;
+  /**
+   * Furthest x reached inside. Loot scales with distance (PRD Loot sources),
+   * so this is what a run is ultimately worth.
+   */
+  deepestX: number;
   outcome: RunOutcome;
   /** The intents held last tick, so the reducer can detect presses. */
   previousIntents: Intents;
