@@ -144,7 +144,7 @@ export class Renderer {
         `action   ${p.action.kind ?? "-"} (lockout ${p.action.lockout})`,
         `outcome  ${state.outcome}`,
         "",
-        `art      ${this.art.loaded.size}/4 loaded`,
+        `art      ${this.art.loaded.size}/6 loaded`,
         ...this.art.issues.map((w) => `  ! ${w}`),
       ].join("\n");
     }
@@ -152,7 +152,7 @@ export class Renderer {
 
   private drawFloor(): void {
     const { floorY, width } = tuning.room;
-    const tile = this.art.get("tile.floor");
+    const tile = this.art.frame("tile.floor");
 
     if (tile) {
       if (!this.floorTile) {
@@ -172,8 +172,8 @@ export class Renderer {
     const { width, height, maxHp } = tuning.enemies.goblin;
     this.enemyGfx.clear();
 
-    const idleArt = this.art.get("enemy.goblin.idle");
-    const windupArt = this.art.get("enemy.goblin.windup");
+    const idleArt = this.art.frame("enemy.goblin.idle");
+    const windupArt = this.art.frame("enemy.goblin.windup");
     const hasArt = idleArt !== null;
 
     // Keep one Sprite per enemy slot rather than churning objects each frame.
@@ -253,6 +253,27 @@ export class Renderer {
     }
   }
 
+  /**
+   * Which frame the player should show. Derived entirely from simulation state
+   * — the view holds no animation clock of its own, so a paused or rewound sim
+   * always draws the same thing.
+   */
+  private playerFrame(state: SimState) {
+    const p = state.player;
+
+    if (p.action.kind === "attack" && this.art.has("player.attack")) {
+      const total = tuning.player.attackStartup + tuning.player.attackActive + 8;
+      return this.art.frameOverProgress("player.attack", p.action.elapsed / total);
+    }
+
+    const moving = Math.abs(p.vx) > 0.1 && p.stance !== "airborne";
+    if (moving && this.art.has("player.run")) {
+      return this.art.frameAtTick("player.run", state.tick);
+    }
+
+    return this.art.frame("player.idle");
+  }
+
   private drawPlayer(state: SimState, x: number, y: number): void {
     const { width, height } = tuning.player;
     const p = state.player;
@@ -269,13 +290,14 @@ export class Renderer {
 
     this.playerGfx.clear();
 
-    const playerArt = this.art.get("player.idle");
+    const playerArt = this.playerFrame(state);
     if (playerArt) {
       if (!this.playerSprite) {
         this.playerSprite = new Sprite(playerArt);
         this.playerSprite.anchor.set(0.5, 1);
         this.world.addChild(this.playerSprite);
       }
+      this.playerSprite.texture = playerArt;
       this.playerSprite.position.set(x, y);
       this.playerSprite.scale.x = p.facing;
       // Deliberately untinted: multiplying a coloured sprite by a state colour

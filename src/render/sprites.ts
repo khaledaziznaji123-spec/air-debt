@@ -8,47 +8,75 @@
  * while the art is still being drawn.
  */
 
-import { Assets, Texture } from "pixi.js";
+import { Assets, Rectangle, Texture } from "pixi.js";
 
 export type SpriteKey =
   | "player.idle"
+  | "player.run"
+  | "player.attack"
   | "enemy.goblin.idle"
   | "enemy.goblin.windup"
   | "tile.floor";
 
 type SpriteDef = {
   path: string;
-  /** Expected pixel size. Mismatches are reported rather than silently scaled. */
+  /** Size of ONE frame. A strip is frames laid left to right at this width. */
   width: number;
   height: number;
+  frames: number;
+  /** Ticks each frame is held. Ignored for single-frame sprites. */
+  ticksPerFrame?: number;
 };
 
 /**
- * The manifest is the contract with whoever is drawing. Sizes match the world
- * units in `tuning.ts` 1:1, so nothing needs scaling.
+ * The manifest is the contract with whoever is drawing. Frame sizes match the
+ * world units in `tuning.ts` 1:1, so nothing needs scaling.
  */
 export const SPRITE_MANIFEST: Record<SpriteKey, SpriteDef> = {
-  "player.idle": { path: "/art/player-idle.png", width: 32, height: 64 },
-  "enemy.goblin.idle": { path: "/art/goblin-idle.png", width: 32, height: 48 },
-  "enemy.goblin.windup": { path: "/art/goblin-windup.png", width: 32, height: 48 },
-  "tile.floor": { path: "/art/tile-floor.png", width: 32, height: 32 },
+  "player.idle": { path: "/art/player-idle.png", width: 32, height: 64, frames: 1 },
+  "player.run": { path: "/art/player-run.png", width: 32, height: 64, frames: 6, ticksPerFrame: 5 },
+  "player.attack": { path: "/art/player-attack.png", width: 32, height: 64, frames: 4 },
+  "enemy.goblin.idle": { path: "/art/goblin-idle.png", width: 32, height: 48, frames: 1 },
+  "enemy.goblin.windup": { path: "/art/goblin-windup.png", width: 32, height: 48, frames: 1 },
+  "tile.floor": { path: "/art/tile-floor.png", width: 32, height: 32, frames: 1 },
 };
 
 export class SpriteSet {
-  private textures = new Map<SpriteKey, Texture>();
+  private frames = new Map<SpriteKey, Texture[]>();
   private warnings: string[] = [];
 
-  /** Which sprites were found. Anything absent falls back to placeholder art. */
   get loaded(): ReadonlySet<SpriteKey> {
-    return new Set(this.textures.keys());
+    return new Set(this.frames.keys());
   }
 
   get issues(): readonly string[] {
     return this.warnings;
   }
 
-  get(key: SpriteKey): Texture | null {
-    return this.textures.get(key) ?? null;
+  has(key: SpriteKey): boolean {
+    return this.frames.has(key);
+  }
+
+  /** One frame of an animation. `index` wraps, so callers need not clamp. */
+  frame(key: SpriteKey, index = 0): Texture | null {
+    const list = this.frames.get(key);
+    if (!list || list.length === 0) return null;
+    return list[((index % list.length) + list.length) % list.length];
+  }
+
+  /** Frame for a free-running animation at the given tick. */
+  frameAtTick(key: SpriteKey, tick: number): Texture | null {
+    const def = SPRITE_MANIFEST[key];
+    const per = def.ticksPerFrame ?? 6;
+    return this.frame(key, Math.floor(tick / per));
+  }
+
+  /** Frame for a one-shot animation, mapped across its whole duration. */
+  frameOverProgress(key: SpriteKey, progress: number): Texture | null {
+    const list = this.frames.get(key);
+    if (!list || list.length === 0) return null;
+    const i = Math.floor(Math.min(Math.max(progress, 0), 0.999) * list.length);
+    return list[i];
   }
 
   static async load(): Promise<SpriteSet> {
@@ -60,19 +88,33 @@ export class SpriteSet {
         try {
           // A 404 returns HTML, which Pixi rejects — so a missing file lands
           // here rather than producing a broken texture.
-          const texture = await Assets.load<Texture>(def.path);
-          if (!texture) return;
+          const sheet = await Assets.load<Texture>(def.path);
+          if (!sheet) return;
 
-          // Pixel art must not be smoothed. Without this, a 32px sprite scaled
-          // to any non-integer size turns to mush.
-          texture.source.scaleMode = "nearest";
-          set.textures.set(key, texture);
+          // Pixel art must not be smoothed, or a 32px sprite scaled to any
+          // non-integer size turns to mush.
+          sheet.source.scaleMode = "nearest";
 
-          if (texture.width !== def.width || texture.height !== def.height) {
+          const expectedWidth = def.width * def.frames;
+          if (sheet.width !== expectedWidth || sheet.height !== def.height) {
             set.warnings.push(
-              `${def.path} is ${texture.width}x${texture.height}, expected ${def.width}x${def.height}`,
+              `${def.path} is ${sheet.width}x${sheet.height}, expected ${expectedWidth}x${def.height}`,
             );
           }
+
+          // Slice the strip. One frame still goes through this path, so there
+          // is only one code path to get wrong.
+          const usable = Math.max(1, Math.min(def.frames, Math.floor(sheet.width / def.width)));
+          const textures: Texture[] = [];
+          for (let i = 0; i < usable; i++) {
+            textures.push(
+              new Texture({
+                source: sheet.source,
+                frame: new Rectangle(i * def.width, 0, def.width, def.height),
+              }),
+            );
+          }
+          set.frames.set(key, textures);
         } catch {
           // Absent art is the normal state until it is drawn. Not an error.
         }
