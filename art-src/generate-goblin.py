@@ -1,179 +1,180 @@
 """
-Generate the goblin: idle, walk cycle, and the wind-up pose.
+The goblin — original design, generated pixel by pixel.
 
-Shorter and hunched, so it reads as a different silhouette from the player at a
-glance rather than as a smaller copy. Palette shares the reference's browns and
-darks so it sits in the same world, with a sickly green that is the player's
-teal pushed toward rot.
+    py art-src/generate-goblin.py
 
-The WIND-UP pose is the one that matters. The whole parry depends on being able
-to read it in a fraction of a second, so it is not a subtle variation: the body
-rears back, the arm goes fully overhead, and the eyes flare.
+Designed against the player rather than beside him. He is upright, sealed and
+symmetrical; this thing is hunched, exposed and lopsided, with a heavy head and
+spindly limbs. The silhouettes have to be distinguishable at a glance in a game
+where you are reading a wind-up in a fraction of a second.
+
+Infected rather than evil, per the fiction — the skin carries the same sickly
+green as the virus, and the one salvaged piece of gear is a stolen rebreather
+lens over a single eye, cracked and dim.
+
+Output: idle (2), walk (6), wind-up (2), strike (2), stagger (1).
 """
 import math
 from pathlib import Path
-from PIL import Image
+from pixel import Canvas, rgb, save_strip, save_preview
 
 W, H = 48, 64
 OUT = Path(__file__).resolve().parent.parent / "public" / "art"
 OUT.mkdir(parents=True, exist_ok=True)
 
-C = {
-    "line":    (0x1c, 0x14, 0x12, 255),
-    "skin":    (0x5a, 0x6b, 0x3f, 255),
-    "skin_l":  (0x6f, 0x82, 0x4d, 255),
-    "skin_d":  (0x3d, 0x4a, 0x2b, 255),
-    "rag":     (0x4e, 0x2c, 0x20, 255),
-    "rag_d":   (0x36, 0x1e, 0x16, 255),
-    "leather": (0x67, 0x39, 0x25, 255),
-    "eye":     (0xf4, 0xa2, 0x59, 255),
-    "eye_hot": (0xff, 0xd9, 0x8a, 255),
-    "metal":   (0x8f, 0x98, 0xa4, 255),
-    "metal_l": (0xc9, 0xd2, 0xdd, 255),
+P = {
+    "skin_hi": rgb(0x7E9152), "skin": rgb(0x5C6C3A), "skin_sh": rgb(0x3F4B26), "skin_dk": rgb(0x252D16),
+    "rag_hi": rgb(0x6B4A32), "rag": rgb(0x4A3122), "rag_sh": rgb(0x2F1E14), "rag_dk": rgb(0x1B110B),
+    "met_hi": rgb(0xC6CFD8), "met": rgb(0x8B96A2), "met_sh": rgb(0x5C6570), "met_dk": rgb(0x373E46),
+    "eye_hi": rgb(0xFFE9A8), "eye": rgb(0xF0A83C), "eye_sh": rgb(0xA96B18),
+    "lens": rgb(0x4E8C86), "lens_sh": rgb(0x2B514E),
 }
 
+SHADE = {
+    P["skin"]: (P["skin_hi"], P["skin_sh"]),
+    P["rag"]: (P["rag_hi"], P["rag_sh"]),
+    P["met"]: (P["met_hi"], P["met_sh"]),
+    P["eye"]: (P["eye_hi"], P["eye_sh"]),
+}
+OUTLINE = {
+    P["skin_hi"]: P["skin_dk"], P["skin"]: P["skin_dk"], P["skin_sh"]: P["skin_dk"],
+    P["rag_hi"]: P["rag_dk"], P["rag"]: P["rag_dk"], P["rag_sh"]: P["rag_dk"],
+    P["met_hi"]: P["met_dk"], P["met"]: P["met_dk"], P["met_sh"]: P["met_dk"],
+    P["eye_hi"]: P["eye_sh"], P["eye"]: P["eye_sh"],
+    P["lens"]: P["lens_sh"],
+}
 
-class Canvas:
-    def __init__(self, w=W, h=H):
-        self.w, self.h, self.px = w, h, [[None] * w for _ in range(h)]
-
-    def set(self, x, y, col):
-        x, y = int(round(x)), int(round(y))
-        if 0 <= x < self.w and 0 <= y < self.h:
-            self.px[y][x] = col
-
-    def rect(self, x0, y0, x1, y1, col):
-        for y in range(int(round(y0)), int(round(y1)) + 1):
-            for x in range(int(round(x0)), int(round(x1)) + 1):
-                self.set(x, y, col)
-
-    def line(self, x0, y0, x1, y1, col, thick=1):
-        steps = int(max(abs(x1 - x0), abs(y1 - y0))) + 1
-        for i in range(steps):
-            t = i / max(steps - 1, 1)
-            x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
-            r = thick // 2
-            for dy in range(-r, r + 1):
-                for dx in range(-r, r + 1):
-                    self.set(x + dx, y + dy, col)
-
-    def outline(self, col=C["line"]):
-        filled = [[self.px[y][x] is not None for x in range(self.w)] for y in range(self.h)]
-        edge = [
-            (x, y)
-            for y in range(self.h)
-            for x in range(self.w)
-            if not filled[y][x]
-            and any(
-                0 <= x + dx < self.w and 0 <= y + dy < self.h and filled[y + dy][x + dx]
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-            )
-        ]
-        for x, y in edge:
-            self.set(x, y, col)
-
-    def image(self):
-        img = Image.new("RGBA", (self.w, self.h), (0, 0, 0, 0))
-        for y in range(self.h):
-            for x in range(self.w):
-                if self.px[y][x]:
-                    img.putpixel((x, y), self.px[y][x])
-        return img
+CX, GROUND, HIP, SHOULDER = 23, 60, 40, 28
 
 
-GROUND = 61
-CX = 24
+def canvas():
+    return Canvas(W, H, SHADE, OUTLINE, P["skin_dk"])
 
 
-def goblin(front_foot, back_foot, arm_angle, bob=0, hunch=0, eyes_hot=False, weapon=True):
-    """hunch leans the torso forward; arm_angle is degrees, -90 is straight up."""
-    c = Canvas()
-    hip_y = 44 + bob
-    sh_y = 32 + bob + hunch
-    head_y = 24 + bob + hunch * 2
+def draw_leg(c, hip_x, foot_x, back=False):
+    col = P["skin_sh"] if back else P["skin"]
+    knee_x = (hip_x + foot_x) / 2 - 2  # knees bow outward
+    c.taper(hip_x, HIP, knee_x, (HIP + GROUND) / 2, 7, 5, col)
+    c.taper(knee_x, (HIP + GROUND) / 2, foot_x, GROUND - 2, 5, 4, col)
+    c.rect(foot_x - 4, GROUND - 2, foot_x + 3, GROUND, P["rag_sh"])  # wrapped foot
+    c.rect(foot_x - 4, GROUND - 3, foot_x + 1, GROUND - 3, P["rag"])
 
-    # legs — bandy and wide, nothing like the player's stride
-    for foot, col in ((back_foot, C["skin_d"]), (front_foot, C["skin"])):
-        c.line(CX, hip_y, foot, GROUND - 2, col, thick=4)
-        c.rect(foot - 3, GROUND - 2, foot + 3, GROUND, C["rag_d"])
 
-    # torso, leaning with the hunch
-    c.line(CX, hip_y, CX + hunch, sh_y, C["skin"], thick=9)
-    c.rect(CX - 5 + hunch, sh_y + 2, CX + 5 + hunch, hip_y - 1, C["rag"])
-    c.rect(CX - 5 + hunch, sh_y + 2, CX - 3 + hunch, hip_y - 1, C["rag_d"])
-    c.rect(CX - 5 + hunch, hip_y - 3, CX + 5 + hunch, hip_y - 2, C["leather"])
-
-    # head: low and forward, ears wide for silhouette
-    hx, hy = CX + hunch * 2, head_y
-    c.rect(hx - 5, hy - 4, hx + 5, hy + 4, C["skin"])
-    c.rect(hx + 3, hy - 4, hx + 5, hy + 4, C["skin_d"])
-    c.rect(hx - 8, hy - 3, hx - 6, hy + 1, C["skin_l"])   # ears
-    c.rect(hx + 6, hy - 3, hx + 8, hy + 1, C["skin_d"])
-    c.rect(hx - 6, hy - 5, hx + 6, hy - 5, C["skin_l"])   # brow
-    eye = C["eye_hot"] if eyes_hot else C["eye"]
-    c.rect(hx - 3, hy - 2, hx - 2, hy - 1, eye)
-    c.rect(hx + 1, hy - 2, hx + 2, hy - 1, eye)
-    c.rect(hx - 3, hy + 2, hx + 3, hy + 2, C["skin_d"])   # mouth line
-
-    # arm and cleaver
-    a = math.radians(arm_angle)
-    sx, sy = CX + hunch + 3, sh_y + 3
-    hand_x, hand_y = sx + math.cos(a) * 11, sy + math.sin(a) * 11
-    c.line(sx, sy, hand_x, hand_y, C["skin_l"], thick=3)
+def draw_arm(c, sh_x, hand_x, hand_y, back=False, weapon=False):
+    col = P["skin_sh"] if back else P["skin"]
+    ex, ey = (sh_x + hand_x) / 2, (SHOULDER + hand_y) / 2 + 2
+    c.taper(sh_x, SHOULDER, ex, ey, 5, 4, col)
+    c.taper(ex, ey, hand_x, hand_y, 4, 3, col)
+    c.disc(hand_x, hand_y, 2, P["rag_sh"])
     if weapon:
-        tip_x = hand_x + math.cos(a) * 13
-        tip_y = hand_y + math.sin(a) * 13
-        c.line(hand_x, hand_y, tip_x, tip_y, C["metal"], thick=3)
-        c.line(hand_x, hand_y, tip_x, tip_y, C["metal_l"], thick=1)
+        # A cleaver: broad, crude, nothing like the player's tapered blade.
+        c.taper(hand_x, hand_y, hand_x + 11, hand_y - 5, 3, 3, P["met_sh"])
+        c.rect(hand_x + 6, hand_y - 11, hand_x + 15, hand_y - 4, P["met"])
+        c.rect(hand_x + 6, hand_y - 11, hand_x + 14, hand_y - 10, P["met_hi"])
 
+
+def draw_body(c, hunch, bob):
+    x = CX + hunch
+    y = bob
+
+    # torso: narrow chest, heavy shoulders, leaning with the hunch
+    c.taper(CX, HIP + y, x, SHOULDER + y, 13, 15, P["skin"])
+    # rag wrap across the middle
+    c.rect(x - 7, HIP + y - 9, x + 7, HIP + y - 4, P["rag"])
+    c.taper(x - 8, HIP + y - 6, x + 6, SHOULDER + y + 3, 4, 4, P["rag_sh"])
+    # ribs, suggested rather than drawn
+    for i in range(3):
+        c.rect(x + 2, SHOULDER + y + 4 + i * 3, x + 6, SHOULDER + y + 4 + i * 3, P["skin_sh"])
+
+
+def draw_head(c, hunch, bob, eyes_hot=False):
+    # Heavy head carried forward of the shoulders — the opposite of the
+    # player's upright, sealed posture.
+    x = CX + hunch * 2 + 2
+    y = 17 + bob
+
+    c.disc(x, y, 8, P["skin"])
+    c.rect(x - 10, y - 4, x - 6, y + 3, P["skin_sh"])   # back of skull
+    # ears, deliberately different sizes
+    c.taper(x - 7, y - 1, x - 14, y - 6, 5, 1, P["skin_sh"])
+    c.taper(x + 6, y, x + 12, y - 3, 4, 1, P["skin_hi"])
+    # heavy brow
+    c.rect(x - 5, y - 5, x + 6, y - 3, P["skin_sh"])
+    c.rect(x - 5, y - 6, x + 5, y - 6, P["skin_hi"])
+    # one bare eye, one behind a salvaged lens
+    eye = P["eye_hi"] if eyes_hot else P["eye"]
+    c.disc(x + 4, y - 1, 1.8, eye)
+    c.disc(x - 1, y - 1, 2.6, P["met_sh"])
+    c.disc(x - 1, y - 1, 1.7, P["lens"])
+    # jaw and teeth
+    c.rect(x - 3, y + 4, x + 6, y + 6, P["skin_sh"])
+    for tx in (x - 2, x + 1, x + 4):
+        c.rect(tx, y + 4, tx, y + 5, P["met_hi"])
+
+
+def frame(front_foot, back_foot, front_hand, back_hand,
+          hunch=2, bob=0, eyes_hot=False, weapon=True):
+    c = canvas()
+    draw_leg(c, CX - 3, back_foot, back=True)
+    draw_arm(c, CX - 5, back_hand[0], back_hand[1] + bob, back=True)
+    draw_body(c, hunch, bob)
+    draw_head(c, hunch, bob, eyes_hot)
+    draw_leg(c, CX + 3, front_foot)
+    draw_arm(c, CX + 5, front_hand[0], front_hand[1] + bob, weapon=weapon)
+    c.shade()
     c.outline()
     return c.image()
 
 
-def idle():
-    return [goblin(front_foot=CX + 6, back_foot=CX - 6, arm_angle=55)]
+def idle(n=2):
+    return [
+        frame(CX + 6, CX - 6, (CX + 9, 40 + (i == 1)), (CX - 9, 39), bob=(0, -1)[i])
+        for i in range(n)
+    ]
 
 
-def walk(frames=4):
+def walk(n=6):
     out = []
-    for i in range(frames):
-        p = (i / frames) * math.tau
-        swing = math.sin(p) * 7
-        out.append(goblin(
-            front_foot=CX + swing,
-            back_foot=CX - swing,
-            arm_angle=55 - math.sin(p) * 18,
-            bob=-1 if math.sin(p * 2) > 0.4 else 0,
-            hunch=1,
+    for i in range(n):
+        p = (i / n) * math.tau
+        sw = math.sin(p) * 8
+        out.append(frame(
+            CX + sw, CX - sw,
+            (CX + 8 - sw * 0.4, 41), (CX - 8 + sw * 0.4, 40),
+            hunch=3, bob=-1 if math.sin(p * 2) > 0.4 else 0,
         ))
     return out
 
 
-def windup():
-    # Rears back, arm fully overhead, eyes flaring. Has to be unmistakable in a
-    # fraction of a second or the parry is not a fair read (PRD FR-6.1).
-    return [goblin(
-        front_foot=CX + 8, back_foot=CX - 7, arm_angle=-95,
-        bob=-2, hunch=-3, eyes_hot=True,
-    )]
+def windup(n=2):
+    """Rears back, cleaver overhead, eyes flaring. Must be unmistakable — the
+    entire parry depends on reading this in a fraction of a second."""
+    return [
+        frame(CX + 9, CX - 8, (CX + 2, 22 - i * 2), (CX - 11, 36),
+              hunch=-4, bob=-2 - i, eyes_hot=True)
+        for i in range(n)
+    ]
 
 
-def save(frames, name):
-    sheet = Image.new("RGBA", (W * len(frames), H), (0, 0, 0, 0))
-    for i, f in enumerate(frames):
-        sheet.paste(f, (i * W, 0))
-    sheet.save(OUT / name)
-    print(f"{name}: {len(frames)} frame(s) -> {sheet.width}x{sheet.height}")
+def strike(n=2):
+    return [
+        frame(CX + 11, CX - 5, (CX + 13 + i * 2, 40 + i * 4), (CX - 8, 40),
+              hunch=5, bob=i, eyes_hot=True)
+        for i in range(n)
+    ]
 
 
-save(idle(), "goblin-idle.png")
-save(walk(), "goblin-walk.png")
-save(windup(), "goblin-windup.png")
+def stagger():
+    return [frame(CX - 2, CX - 11, (CX - 6, 44), (CX - 13, 38), hunch=-5, bob=2)]
 
-preview = idle() + walk() + windup()
-s = 5
-canvas = Image.new("RGBA", (W * len(preview) * s, H * s), (0x15, 0x16, 0x1a, 255))
-for i, f in enumerate(preview):
-    canvas.alpha_composite(f.resize((W * s, H * s), Image.NEAREST), (i * W * s, 0))
-canvas.save(Path(__file__).resolve().parent / "_preview-goblin.png")
-print("preview -> art-src/_preview-goblin.png")
+
+save_strip(idle(), OUT / "goblin-idle.png", W, H)
+save_strip(walk(), OUT / "goblin-walk.png", W, H)
+save_strip(windup(), OUT / "goblin-windup.png", W, H)
+save_strip(strike(), OUT / "goblin-strike.png", W, H)
+save_strip(stagger(), OUT / "goblin-stagger.png", W, H)
+
+save_preview(
+    idle() + walk() + windup() + strike() + stagger(),
+    Path(__file__).resolve().parent / "_preview-goblin.png", W, H, scale=5,
+)

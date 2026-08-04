@@ -1,43 +1,75 @@
 """
-Generate the player character: idle, walk cycle, sword attack. 32x64 per frame.
+The player character — original design, generated pixel by pixel.
 
-Palette and proportions are tuned against a reference walk cycle — warm browns,
-a teal scarf, cream sleeves, grey trousers. The pixels here are generated, not
-copied, so nothing that ships carries a provenance question.
+    py art-src/generate-player.py
 
-The design merges that reference with the game's own premise: the scarf is
-pulled up as a rebreather and the goggles carry the oxygen glow, because the
-player is breathing borrowed air and the silhouette should say so.
+Design: a scavenger sealed into a rebreather rig. Full-face mask with twin
+filter canisters and lit lenses, hooded coat with a torn hem, air tank and hose,
+strapped gloves and boots, short sword. Nothing about the silhouette is generic
+fantasy — it says "breathing borrowed air" before it says anything else, which
+is the game's whole premise.
 
-Re-run to regenerate every frame. Poses are parameters, so fixing proportions is
-a number change rather than a redraw.
+Technique notes, because they are what separates this from coloured boxes:
+
+* Every surface carries three tones — base, shadow, highlight — lit from the
+  upper left. Flat fills are what make procedural art look procedural.
+* The outline is derived from each region's own colour rather than a uniform
+  black. Selective outlining reads as drawn; a black keyline reads as clip art.
+* Limbs taper. A constant-width line is instantly legible as a machine's work.
+* Details are placed at odd offsets and never mirrored, because symmetry is the
+  other giveaway.
+
+Output: idle (4), walk (8), attack A (6), attack B (6), block (2), hurt (1).
 """
 import math
 from pathlib import Path
 from PIL import Image
 
-W, H = 32, 64
-OUT = Path(__file__).resolve().parent / "generated"
+W, H = 48, 96
+OUT = Path(__file__).resolve().parent.parent / "public" / "art"
 OUT.mkdir(parents=True, exist_ok=True)
 
-# Sampled from the reference, then tightened for cohesion.
-C = {
-    "line":      (0x22, 0x14, 0x11, 255),
-    "hair":      (0x6b, 0x3e, 0x28, 255),
-    "hair_l":    (0x7c, 0x45, 0x2b, 255),
-    "skin":      (0xe4, 0xa3, 0x6a, 255),
-    "skin_d":    (0xbb, 0x7c, 0x52, 255),
-    "scarf":     (0x33, 0x45, 0x42, 255),
-    "scarf_l":   (0x44, 0x5c, 0x58, 255),
-    "visor":     (0x4e, 0xcd, 0xc4, 255),
-    "sleeve":    (0xe1, 0xc4, 0x95, 255),
-    "vest":      (0x4e, 0x2c, 0x20, 255),
-    "vest_l":    (0x5c, 0x35, 0x24, 255),
-    "leather":   (0x67, 0x39, 0x25, 255),
-    "trouser":   (0x32, 0x34, 0x33, 255),
-    "trouser_l": (0x44, 0x42, 0x3e, 255),
-    "metal":     (0xa8, 0xb2, 0xc0, 255),
-    "metal_l":   (0xe4, 0xeb, 0xf4, 255),
+
+def rgb(h):
+    return ((h >> 16) & 255, (h >> 8) & 255, h & 255, 255)
+
+
+# Palette: five families, three-plus tones each.
+P = {
+    # coat — desaturated slate with a green cast
+    "coat_hi": rgb(0x4A5A63), "coat": rgb(0x36444C), "coat_sh": rgb(0x252F36), "coat_dk": rgb(0x182026),
+    # leather — straps, belt, boots, gloves
+    "lea_hi": rgb(0x8A5A34), "lea": rgb(0x66401F), "lea_sh": rgb(0x452A14), "lea_dk": rgb(0x2C1A0D),
+    # metal — tank, buckles, blade
+    "met_hi": rgb(0xD8E2EC), "met": rgb(0x9BA7B4), "met_sh": rgb(0x6A7581), "met_dk": rgb(0x424B55),
+    # rubber — mask body, hose
+    "rub_hi": rgb(0x3B3F47), "rub": rgb(0x2A2E34), "rub_sh": rgb(0x1B1E23),
+    # lens — the oxygen glow, the brightest thing on the sprite
+    "lens_hi": rgb(0xCFFFF8), "lens": rgb(0x5FD9CF), "lens_sh": rgb(0x2E8C87),
+    # trousers — darker and warmer than the coat, so legs never merge into it
+    "trs_hi": rgb(0x3A3A3E), "trs": rgb(0x2A2A2E), "trs_sh": rgb(0x1C1C20), "trs_dk": rgb(0x121215),
+    # accent — brass
+    "brass": rgb(0xC89A3E), "brass_sh": rgb(0x8A6722),
+}
+
+SHADE = {  # base -> (highlight, shadow) for automatic lighting
+    P["coat"]: (P["coat_hi"], P["coat_sh"]),
+    P["lea"]: (P["lea_hi"], P["lea_sh"]),
+    P["met"]: (P["met_hi"], P["met_sh"]),
+    P["rub"]: (P["rub_hi"], P["rub_sh"]),
+    P["lens"]: (P["lens_hi"], P["lens_sh"]),
+    P["trs"]: (P["trs_hi"], P["trs_sh"]),
+}
+
+# Outline colour per family, so edges stay in-family rather than going black.
+OUTLINE_OF = {
+    P["coat_hi"]: P["coat_dk"], P["coat"]: P["coat_dk"], P["coat_sh"]: P["coat_dk"],
+    P["lea_hi"]: P["lea_dk"], P["lea"]: P["lea_dk"], P["lea_sh"]: P["lea_dk"],
+    P["met_hi"]: P["met_dk"], P["met"]: P["met_dk"], P["met_sh"]: P["met_dk"],
+    P["rub_hi"]: P["rub_sh"], P["rub"]: P["rub_sh"], P["rub_sh"]: P["rub_sh"],
+    P["lens_hi"]: P["lens_sh"], P["lens"]: P["lens_sh"],
+    P["trs_hi"]: P["trs_dk"], P["trs"]: P["trs_dk"], P["trs_sh"]: P["trs_dk"],
+    P["brass"]: P["brass_sh"],
 }
 
 
@@ -51,35 +83,62 @@ class Canvas:
         if 0 <= x < self.w and 0 <= y < self.h:
             self.px[y][x] = col
 
+    def get(self, x, y):
+        x, y = int(x), int(y)
+        return self.px[y][x] if 0 <= x < self.w and 0 <= y < self.h else None
+
     def rect(self, x0, y0, x1, y1, col):
         for y in range(int(round(y0)), int(round(y1)) + 1):
             for x in range(int(round(x0)), int(round(x1)) + 1):
                 self.set(x, y, col)
 
-    def line(self, x0, y0, x1, y1, col, thick=1):
-        steps = int(max(abs(x1 - x0), abs(y1 - y0))) + 1
+    def disc(self, cx, cy, r, col):
+        for y in range(int(cy - r), int(cy + r) + 1):
+            for x in range(int(cx - r), int(cx + r) + 1):
+                if (x - cx) ** 2 + (y - cy) ** 2 <= r * r:
+                    self.set(x, y, col)
+
+    def taper(self, x0, y0, x1, y1, w0, w1, col):
+        """A limb: thickness eases from w0 to w1 along its length."""
+        steps = int(max(abs(x1 - x0), abs(y1 - y0)) * 2) + 1
         for i in range(steps):
             t = i / max(steps - 1, 1)
             x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
-            r = thick // 2
-            for dy in range(-r, r + 1):
-                for dx in range(-r, r + 1):
-                    self.set(x + dx, y + dy, col)
+            r = (w0 + (w1 - w0) * t) / 2
+            for dy in range(int(-r - 1), int(r + 2)):
+                for dx in range(int(-r - 1), int(r + 2)):
+                    if dx * dx + dy * dy <= r * r:
+                        self.set(x + dx, y + dy, col)
 
-    def outline(self, col=C["line"]):
-        filled = [[self.px[y][x] is not None for x in range(self.w)] for y in range(self.h)]
-        edge = []
+    def shade(self):
+        """Light from the upper left: highlight lit edges, shadow the rest."""
+        out = [row[:] for row in self.px]
         for y in range(self.h):
             for x in range(self.w):
-                if filled[y][x]:
+                c = self.px[y][x]
+                if c not in SHADE:
                     continue
-                if any(
-                    0 <= x + dx < self.w and 0 <= y + dy < self.h and filled[y + dy][x + dx]
-                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-                ):
-                    edge.append((x, y))
-        for x, y in edge:
-            self.set(x, y, col)
+                hi, sh = SHADE[c]
+                if self.get(x - 1, y) is None or self.get(x, y - 1) is None:
+                    out[y][x] = hi
+                elif self.get(x + 1, y) is None or self.get(x, y + 1) is None:
+                    out[y][x] = sh
+        self.px = out
+
+    def outline(self):
+        """Edge in each region's own darkest tone rather than a flat black."""
+        add = {}
+        for y in range(self.h):
+            for x in range(self.w):
+                if self.px[y][x] is not None:
+                    continue
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    n = self.get(x + dx, y + dy)
+                    if n is not None:
+                        add[(x, y)] = OUTLINE_OF.get(n, P["coat_dk"])
+                        break
+        for (x, y), c in add.items():
+            self.set(x, y, c)
 
     def image(self):
         img = Image.new("RGBA", (self.w, self.h), (0, 0, 0, 0))
@@ -90,158 +149,205 @@ class Canvas:
         return img
 
 
-# Chunkier than realistic proportions — a bigger head reads better small.
-GROUND, HIP_Y, SHOULDER_Y, HEAD_CY = 61, 39, 24, 14
+# Anatomy for a 96px canvas.
+CX = 23
+GROUND = 92
+HIP = 56
+SHOULDER = 33
+HEAD = 17
+
+
+def draw_boot(c, x, y):
+    c.rect(x - 3, y - 5, x + 3, y - 1, P["lea"])
+    c.rect(x - 4, y - 1, x + 4, y + 1, P["lea_sh"])
+    c.rect(x - 3, y - 6, x + 2, y - 6, P["lea_hi"])
+    c.rect(x - 3, y - 4, x + 2, y - 4, P["brass"])  # buckle strap
 
 
 def draw_leg(c, hip_x, foot_x, foot_y, back=False):
-    col = C["trouser"] if back else C["trouser_l"]
-    knee_x, knee_y = (hip_x + foot_x) / 2, (HIP_Y + foot_y) / 2
-    c.line(hip_x, HIP_Y, knee_x, knee_y, col, thick=4)
-    c.line(knee_x, knee_y, foot_x, foot_y - 3, col, thick=3)
-    c.rect(foot_x - 2, foot_y - 3, foot_x + 2, foot_y, C["leather"])
-    c.rect(foot_x - 2, foot_y - 4, foot_x + 2, foot_y - 4, C["vest_l"])
+    col = P["trs_sh"] if back else P["trs"]
+    knee_x = (hip_x + foot_x) / 2 + (2 if not back else 1)
+    knee_y = (HIP + foot_y) / 2
+    c.taper(hip_x, HIP, knee_x, knee_y, 7, 6, col)
+    c.taper(knee_x, knee_y, foot_x, foot_y - 5, 6, 4, col)
+    draw_boot(c, foot_x, foot_y)
 
 
 def draw_arm(c, sh_x, hand_x, hand_y, back=False):
-    sleeve = C["vest"] if back else C["sleeve"]
-    elbow_x, elbow_y = (sh_x + hand_x) / 2, (SHOULDER_Y + hand_y) / 2
-    c.line(sh_x, SHOULDER_Y, elbow_x, elbow_y, sleeve, thick=3)
-    c.line(elbow_x, elbow_y, hand_x, hand_y, sleeve, thick=2)
-    c.line(hand_x, hand_y - 1, hand_x, hand_y + 1, C["skin_d"] if back else C["skin"], thick=2)
+    col = P["coat_sh"] if back else P["coat"]
+    ex = (sh_x + hand_x) / 2 + (1 if not back else -1)
+    ey = (SHOULDER + hand_y) / 2
+    c.taper(sh_x, SHOULDER + 2, ex, ey, 7, 5, col)
+    c.taper(ex, ey, hand_x, hand_y, 5, 4, col)
+    c.disc(hand_x, hand_y, 2.4, P["lea"])          # glove
+    c.set(hand_x - 1, hand_y - 1, P["lea_hi"])
 
 
-def draw_sword(c, hx, hy, angle_deg, length=14):
-    a = math.radians(angle_deg)
-    tx, ty = hx + math.cos(a) * length, hy + math.sin(a) * length
-    gx, gy = hx + math.cos(a) * 2, hy + math.sin(a) * 2
-    c.line(gx - math.sin(a) * 2, gy + math.cos(a) * 2,
-           gx + math.sin(a) * 2, gy - math.cos(a) * 2, C["leather"])
-    c.line(gx, gy, tx, ty, C["metal"], thick=2)
-    c.line(gx, gy, tx, ty, C["metal_l"])
+def draw_sword(c, hx, hy, ang, length=20):
+    a = math.radians(ang)
+    dx, dy = math.cos(a), math.sin(a)
+    gx, gy = hx + dx * 3, hy + dy * 3
+    tx, ty = hx + dx * length, hy + dy * length
+    c.taper(hx - dx * 3, hy - dy * 3, gx, gy, 3, 3, P["lea_sh"])       # grip
+    c.taper(gx - dy * 4, gy + dx * 4, gx + dy * 4, gy - dx * 4, 3, 3, P["brass"])  # guard
+    c.taper(gx, gy, tx, ty, 5, 2, P["met"])
+    c.taper(gx + dy, gy - dx, tx, ty, 2, 1, P["met_hi"])               # fuller glint
 
 
-def draw_body(c, bob=0, lean=0):
-    y, lx = bob, lean
+def draw_torso(c, lean=0, bob=0):
+    x, y = CX + lean, bob
 
-    # air tank — the premise, worn on the back
-    c.rect(8 + lx, SHOULDER_Y - 1 + y, 10 + lx, SHOULDER_Y + 10 + y, C["trouser_l"])
-    c.rect(8 + lx, SHOULDER_Y - 1 + y, 8 + lx, SHOULDER_Y + 10 + y, C["trouser"])
+    # air tank, worn high on the back
+    c.rect(x - 12, SHOULDER + y - 1, x - 8, HIP + y - 8, P["met_sh"])
+    c.rect(x - 12, SHOULDER + y - 1, x - 11, HIP + y - 8, P["met"])
+    c.rect(x - 12, SHOULDER + y + 4, x - 8, SHOULDER + y + 5, P["brass_sh"])
+    c.rect(x - 12, SHOULDER + y + 12, x - 8, SHOULDER + y + 13, P["brass_sh"])
 
-    # torso
-    c.rect(11 + lx, SHOULDER_Y - 1 + y, 21 + lx, HIP_Y + y, C["vest"])
-    c.rect(19 + lx, SHOULDER_Y - 1 + y, 21 + lx, HIP_Y + y, C["vest_l"])
-    c.line(12 + lx, HIP_Y - 3 + y, 20 + lx, SHOULDER_Y + 1 + y, C["leather"], thick=1)
-    c.rect(11 + lx, HIP_Y - 3 + y, 21 + lx, HIP_Y - 1 + y, C["leather"])
-    # satchel at the hip
-    c.rect(9 + lx, HIP_Y - 2 + y, 13 + lx, HIP_Y + 3 + y, C["hair"])
-    c.rect(9 + lx, HIP_Y - 2 + y, 13 + lx, HIP_Y - 2 + y, C["hair_l"])
+    # coat body, flaring to a torn hem
+    c.taper(x, SHOULDER + y, x, HIP + y - 2, 16, 14, P["coat"])
+    for i, dx in enumerate((-9, -6, -2, 2, 6, 9)):
+        depth = (3, 5, 2, 6, 3, 4)[i]
+        c.rect(x + dx - 1, HIP + y - 2, x + dx + 1, HIP + y - 2 + depth, P["coat_sh"])
 
-    # scarf
-    c.rect(11 + lx, SHOULDER_Y - 3 + y, 21 + lx, SHOULDER_Y + y, C["scarf"])
-    c.rect(12 + lx, SHOULDER_Y - 4 + y, 20 + lx, SHOULDER_Y - 4 + y, C["scarf_l"])
-    c.rect(21 + lx, SHOULDER_Y - 2 + y, 22 + lx, SHOULDER_Y + 3 + y, C["scarf"])
+    # chest strap and belt
+    c.taper(x - 8, HIP + y - 9, x + 8, SHOULDER + y + 3, 4, 4, P["lea"])
+    c.rect(x - 9, HIP + y - 8, x + 9, HIP + y - 4, P["lea_sh"])
+    c.rect(x - 2, HIP + y - 8, x + 2, HIP + y - 4, P["brass"])
+    c.rect(x - 1, HIP + y - 7, x + 1, HIP + y - 5, P["brass_sh"])
 
-    # head
-    hx, hy = 16 + lx, HEAD_CY + y
-    c.rect(hx - 4, hy - 3, hx + 4, hy + 6, C["skin"])
-    c.rect(hx + 3, hy - 3, hx + 4, hy + 6, C["skin_d"])
-    c.rect(hx - 4, hy + 4, hx + 4, hy + 6, C["scarf"])
-    # goggles: brightest thing on the sprite, so facing is never ambiguous
-    c.rect(hx - 4, hy, hx + 4, hy + 2, C["line"])
-    c.rect(hx - 3, hy, hx - 1, hy + 1, C["visor"])
-    c.rect(hx + 1, hy, hx + 3, hy + 1, C["visor"])
-    # Hair, tapered rather than a block. A flat-topped rectangle reads as a
-    # helmet; narrowing each row up gives a head silhouette instead.
-    c.rect(hx - 5, hy - 2, hx + 5, hy - 1, C["hair"])   # sides, past the ears
-    c.rect(hx - 5, hy - 4, hx + 5, hy - 3, C["hair"])
-    c.rect(hx - 4, hy - 6, hx + 4, hy - 5, C["hair"])
-    c.rect(hx - 3, hy - 7, hx + 3, hy - 7, C["hair"])
-    c.rect(hx - 4, hy - 6, hx + 1, hy - 6, C["hair_l"])  # top light
-    c.rect(hx - 3, hy - 4, hx - 1, hy - 4, C["hair_l"])
-    # spikes, offset so they do not line up into a fringe
-    for dx, dy in ((-4, -8), (-1, -9), (2, -8), (4, -9)):
-        c.rect(hx + dx, hy + dy, hx + dx, hy + dy + 1, C["hair"])
-    c.rect(hx - 5, hy - 1, hx - 4, hy + 1, C["hair"])   # sideburn frames the face
+    # shoulder cape, asymmetric on purpose
+    c.taper(x - 8, SHOULDER + y + 1, x + 6, SHOULDER + y - 1, 9, 6, P["coat_hi"])
+    c.rect(x - 9, SHOULDER + y + 2, x + 1, SHOULDER + y + 5, P["coat_hi"])
+
+    # hose, tank to mask
+    for t in range(9):
+        f = t / 8
+        hx = x - 11 + f * 8
+        hy = SHOULDER + y - 1 - f * 9 + math.sin(f * 3.1) * 2
+        c.disc(hx, hy, 1.6, P["rub"])
 
 
-def frame(legs, arms, sword=None, bob=0, lean=0):
+def draw_head(c, lean=0, bob=0, lens_hot=False):
+    x, y = CX + lean * 2, HEAD + bob
+
+    c.disc(x, y, 9, P["coat_sh"])       # hood
+    c.disc(x + 1, y + 1, 8, P["rub"])   # mask shell
+    c.rect(x - 9, y - 4, x - 5, y + 5, P["coat_sh"])
+    c.rect(x - 10, y - 1, x - 9, y + 3, P["coat"])  # hood edge catching light
+
+    # twin filter canisters, offset so the face is never symmetric
+    c.disc(x + 6, y + 4, 3.4, P["met_sh"])
+    c.disc(x + 6, y + 4, 2.2, P["met"])
+    c.disc(x + 2, y + 7, 2.8, P["met_sh"])
+    c.disc(x + 2, y + 7, 1.7, P["met"])
+
+    # lenses
+    lens = P["lens_hi"] if lens_hot else P["lens"]
+    c.disc(x + 2, y - 2, 3.2, P["rub_sh"])
+    c.disc(x + 2, y - 2, 2.3, lens)
+    c.set(x + 1, y - 3, P["lens_hi"])
+    c.disc(x - 4, y - 1, 2.6, P["rub_sh"])
+    c.disc(x - 4, y - 1, 1.8, lens)
+
+    c.rect(x - 6, y - 7, x + 5, y - 6, P["rub_hi"])  # brow strap
+    c.rect(x - 7, y - 7, x - 6, y - 5, P["brass"])   # buckle
+
+
+def frame(front_foot, back_foot, front_hand, back_hand, sword_ang,
+          lean=0, bob=0, lens_hot=False, sword=True):
     c = Canvas()
-    draw_leg(c, 15 + lean, legs["back_x"], legs["back_y"], back=True)
-    draw_arm(c, 13 + lean, arms["back_x"], arms["back_y"] + bob, back=True)
-    draw_body(c, bob=bob, lean=lean)
-    draw_leg(c, 17 + lean, legs["front_x"], legs["front_y"])
-    draw_arm(c, 20 + lean, arms["front_x"], arms["front_y"] + bob)
-    if sword is not None:
-        draw_sword(c, arms["front_x"], arms["front_y"] + bob, sword)
+    draw_leg(c, CX - 3, back_foot, GROUND, back=True)
+    draw_arm(c, CX - 7, back_hand[0], back_hand[1] + bob, back=True)
+    draw_torso(c, lean, bob)
+    draw_head(c, lean, bob, lens_hot)
+    draw_leg(c, CX + 3, front_foot, GROUND)
+    draw_arm(c, CX + 7, front_hand[0], front_hand[1] + bob)
+    if sword:
+        draw_sword(c, front_hand[0], front_hand[1] + bob, sword_ang)
+    c.shade()
     c.outline()
     return c.image()
 
 
-def idle():
-    return [frame(
-        legs={"front_x": 18, "front_y": GROUND, "back_x": 14, "back_y": GROUND},
-        arms={"front_x": 22, "front_y": 36, "back_x": 11, "back_y": 36},
-        sword=80,
-    )]
-
-
-def walk(frames=6):
+def idle(n=4):
     out = []
-    for i in range(frames):
-        p = (i / frames) * math.tau
-        swing = math.sin(p) * 7
-        lift = max(0.0, math.sin(p)) * 5
-        lift_b = max(0.0, math.sin(p + math.pi)) * 5
-        bob = -1 if math.sin(p * 2) > 0.4 else 0
+    for i in range(n):
+        b = (0, -1, 0, 0)[i]
+        out.append(frame(CX + 6, CX - 6, (CX + 12, 60 + b), (CX - 11, 59), 72, bob=b))
+    return out
+
+
+def walk(n=8):
+    out = []
+    for i in range(n):
+        p = (i / n) * math.tau
+        sw = math.sin(p) * 11
+        lift = max(0.0, math.sin(p)) * 6
+        lift_b = max(0.0, math.sin(p + math.pi)) * 6
         out.append(frame(
-            legs={
-                "front_x": 16 + swing, "front_y": GROUND - lift,
-                "back_x": 16 - swing, "back_y": GROUND - lift_b,
-            },
-            arms={
-                # counter-swing: what makes a walk read as a walk
-                "front_x": 21 - swing * 0.7, "front_y": 35,
-                "back_x": 11 + swing * 0.7, "back_y": 35,
-            },
-            sword=80, bob=bob, lean=1,
+            CX + sw, CX - sw,
+            (CX + 11 - sw * 0.5, 60), (CX - 10 + sw * 0.5, 59),
+            74, lean=1, bob=-1 if math.sin(p * 2) > 0.4 else 0,
         ))
     return out
 
 
-def attack():
+def attack_a(n=6):
+    """Overhead cut: wind up past the shoulder, then down and through."""
     poses = [
-        (-125, 12, 27, -1),  # startup: blade back over the shoulder
-        (-40, 22, 29, 1),    # active: coming down
-        (5, 25, 33, 2),      # active: full extension
-        (50, 22, 36, 0),     # recovery
+        (-115, CX - 6, 44, -2), (-95, CX - 3, 38, -2), (-30, CX + 10, 42, 2),
+        (20, CX + 15, 52, 3), (55, CX + 13, 60, 1), (70, CX + 12, 61, 0),
     ]
     return [
-        frame(
-            legs={"front_x": 19 + ln, "front_y": GROUND, "back_x": 13 + ln, "back_y": GROUND},
-            arms={"front_x": hx, "front_y": hy, "back_x": 11 + ln, "back_y": 36},
-            sword=ang, lean=ln,
-        )
-        for ang, hx, hy, ln in poses
+        frame(CX + 7 + ln, CX - 8 + ln, (hx, hy), (CX - 10 + ln, 58), ang,
+              lean=ln, lens_hot=(i in (2, 3)))
+        for i, (ang, hx, hy, ln) in enumerate(poses)
     ]
 
 
-def save_strip(frames, name):
+def attack_b(n=6):
+    """Low rising sweep: drop the blade, then drive it up and out."""
+    poses = [
+        (120, CX + 4, 68, -1), (140, CX + 1, 72, -2), (60, CX + 11, 66, 2),
+        (0, CX + 16, 56, 3), (-35, CX + 15, 47, 2), (60, CX + 12, 60, 0),
+    ]
+    return [
+        frame(CX + 8 + ln, CX - 7 + ln, (hx, hy), (CX - 9 + ln, 60), ang,
+              lean=ln, lens_hot=(i in (3, 4)))
+        for i, (ang, hx, hy, ln) in enumerate(poses)
+    ]
+
+
+def block(n=2):
+    return [
+        frame(CX + 5, CX - 7, (CX + 9, 46), (CX - 9, 54), -60, lean=-1, lens_hot=(i == 0))
+        for i in range(n)
+    ]
+
+
+def hurt():
+    return [frame(CX + 3, CX - 9, (CX + 8, 64), (CX - 12, 56), 100, lean=-3, bob=1)]
+
+
+def save(frames, name):
     sheet = Image.new("RGBA", (W * len(frames), H), (0, 0, 0, 0))
     for i, f in enumerate(frames):
         sheet.paste(f, (i * W, 0))
     sheet.save(OUT / name)
-    print(f"{name}: {len(frames)} frame(s) -> {sheet.width}x{sheet.height}")
+    print(f"{name}: {len(frames)} frames -> {sheet.width}x{sheet.height}")
 
 
-save_strip(idle(), "player-idle.png")
-save_strip(walk(), "player-run.png")
-save_strip(attack(), "player-attack.png")
+save(idle(), "player-idle.png")
+save(walk(), "player-run.png")
+save(attack_a(), "player-attack-a.png")
+save(attack_b(), "player-attack-b.png")
+save(block(), "player-block.png")
+save(hurt(), "player-hurt.png")
 
-preview = idle() + walk() + attack()
-scale = 5
-sheet = Image.new("RGBA", (W * len(preview) * scale, H * scale), (0x1b, 0x1d, 0x20, 255))
+preview = idle() + walk() + attack_a() + attack_b() + block() + hurt()
+s = 4
+canvas = Image.new("RGBA", (W * len(preview) * s, H * s), (0x0B, 0x0E, 0x14, 255))
 for i, f in enumerate(preview):
-    sheet.alpha_composite(f.resize((W * scale, H * scale), Image.NEAREST), (i * W * scale, 0))
-sheet.save(Path(__file__).resolve().parent / "_preview.png")
-print("preview -> art-src/_preview.png")
+    canvas.alpha_composite(f.resize((W * s, H * s), Image.NEAREST), (i * W * s, 0))
+canvas.save(Path(__file__).resolve().parent / "_preview-player.png")
+print("preview -> art-src/_preview-player.png")

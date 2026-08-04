@@ -157,7 +157,7 @@ export class Renderer {
         `action   ${p.action.kind ?? "-"} (lockout ${p.action.lockout})`,
         `outcome  ${state.outcome}`,
         "",
-        `art      ${this.art.loaded.size}/7 loaded`,
+        `art      ${this.art.loaded.size}/12 loaded`,
         ...this.art.issues.map((w) => `  ! ${w}`),
       ].join("\n");
     }
@@ -185,12 +185,42 @@ export class Renderer {
     this.floorGfx.rect(0, floorY, width, 720 - floorY).fill(COLOR.floor);
   }
 
+  /**
+   * Which frame a goblin shows, derived entirely from its simulation phase.
+   * The wind-up pose gets used for the whole commitment rather than only the
+   * telegraph, because that is the thing the player is reading.
+   */
+  private goblinFrame(
+    e: SimState["enemies"][number],
+    tick: number,
+    index: number,
+  ) {
+    switch (e.phase) {
+      case "telegraphing":
+        return this.art.frameOverProgress(
+          "enemy.goblin.windup",
+          e.phaseTicks / tuning.enemies.goblin.telegraph,
+        );
+      case "striking":
+        return this.art.frameOverProgress(
+          "enemy.goblin.strike",
+          e.phaseTicks / tuning.enemies.goblin.active,
+        );
+      case "staggered":
+        return this.art.frame("enemy.goblin.stagger");
+      case "approaching":
+        // Offset per enemy so a group does not march in lockstep.
+        return this.art.frameAtTick("enemy.goblin.walk", tick + index * 13);
+      default:
+        return this.art.frameAtTick("enemy.goblin.idle", tick + index * 21);
+    }
+  }
+
   private drawEnemies(state: SimState): void {
     const { width, height, maxHp } = tuning.enemies.goblin;
     this.enemyGfx.clear();
 
     const idleArt = this.art.frame("enemy.goblin.idle");
-    const windupArt = this.art.frame("enemy.goblin.windup");
     const hasArt = idleArt !== null;
 
     // Keep one Sprite per enemy slot rather than churning objects each frame.
@@ -206,21 +236,7 @@ export class Renderer {
       if (sprite) {
         sprite.visible = hasArt && e.phase !== "dead";
         if (sprite.visible) {
-          // The wind-up pose is what the player is reading — use it whenever
-          // the goblin is committed, not only during the telegraph itself.
-          const committed =
-            e.phase === "telegraphing" || e.phase === "striking";
-          const walking = e.phase === "approaching";
-          sprite.texture = (
-            committed
-              ? (windupArt ?? idleArt)
-              : walking
-                ? (this.art.frameAtTick(
-                    "enemy.goblin.walk",
-                    state.tick + i * 13,
-                  ) ?? idleArt)
-                : idleArt
-          )!;
+          sprite.texture = (this.goblinFrame(e, state.tick, i) ?? idleArt)!;
           sprite.position.set(e.x, e.y);
           sprite.scale.x = e.facing;
         }
@@ -293,8 +309,7 @@ export class Renderer {
 
     if (p.action.kind === "attack") {
       // Alternating swings, so a chain does not replay the same animation.
-      const key =
-        p.action.variant === 0 ? "player.attack.a" : "player.attack.b";
+      const key = p.action.variant === 0 ? "player.attack.a" : "player.attack.b";
       if (this.art.has(key)) {
         const total =
           tuning.player.attackStartup +
@@ -304,12 +319,19 @@ export class Renderer {
       }
     }
 
+    if (p.action.kind === "block" && this.art.has("player.block")) {
+      // Frame 0 is the live parry window, frame 1 the punish tail — the two
+      // states must not look alike, because telling them apart IS the skill.
+      const parrying = p.action.elapsed < tuning.combat.parryWindow;
+      return this.art.frame("player.block", parrying ? 0 : 1);
+    }
+
     const moving = Math.abs(p.vx) > 0.1 && p.stance !== "airborne";
     if (moving && this.art.has("player.run")) {
       return this.art.frameAtTick("player.run", state.tick);
     }
 
-    return this.art.frame("player.idle");
+    return this.art.frameAtTick("player.idle", state.tick);
   }
 
   private drawPlayer(state: SimState, x: number, y: number): void {
