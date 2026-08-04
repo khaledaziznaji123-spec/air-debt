@@ -23,11 +23,15 @@ function run(
   return s;
 }
 
-/** A state with one goblin close enough to engage immediately. */
+/**
+ * A state with one goblin close enough to engage immediately, and the run
+ * already started — combat tests are about the fight, not the approach.
+ */
 function duel(): SimState {
   const base = createInitialState(60 * 60);
   return {
     ...base,
+    entered: true,
     enemies: [
       {
         ...base.enemies[0],
@@ -306,4 +310,49 @@ test("jumping clears a goblin's head", () => {
   const overhead = s.player.x;
   s = run(s, 6, Intent.Right);
   assert.ok(s.player.x > overhead, "and movement must not be blocked up there");
+});
+
+test("air does not burn until you step into the cave", () => {
+  let s = createInitialState(600);
+  assert.equal(s.entered, false);
+  for (let i = 0; i < 120; i++) s = step(s, Intent.None);
+  assert.equal(s.air, 600, "standing outside must cost nothing");
+  assert.equal(s.outcome, "running");
+});
+
+test("crossing the mouth starts the run, once", () => {
+  let s = createInitialState(600);
+  let entries = 0;
+  for (let i = 0; i < 200; i++) {
+    s = step(s, Intent.Right);
+    entries += s.events.filter((e) => e.type === "entered").length;
+    if (s.entered) break;
+  }
+  assert.equal(s.entered, true, "walking right must reach the entrance");
+  assert.ok(s.player.x >= tuning.room.entranceX);
+  assert.equal(entries, 1, "the threshold fires exactly once");
+
+  const airOnEntry = s.air;
+  s = run(s, 30);
+  assert.ok(s.air < airOnEntry, "and the clock runs from then on");
+});
+
+test("goblins do not move until the player is inside", () => {
+  let s = createInitialState(600);
+  const startX = s.enemies[0].x;
+  // Stand still outside for a long time.
+  for (let i = 0; i < 240; i++) s = step(s, Intent.None);
+  assert.equal(s.entered, false);
+  assert.equal(s.enemies[0].x, startX, "nothing hunts you in the open");
+  assert.equal(s.enemies[0].phaseTicks, 0);
+});
+
+test("every goblin starts inside the cave", () => {
+  const s = createInitialState(600);
+  for (const e of s.enemies) {
+    assert.ok(
+      e.x > tuning.room.entranceX,
+      "monsters belong to the dungeon, not the approach",
+    );
+  }
 });

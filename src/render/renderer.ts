@@ -40,6 +40,15 @@ const COLOR = {
   enemyStaggered: 0x4ecdc4,
   parryFlash: 0xffffff,
   swing: 0xf4a259,
+  groundOutside: 0x2b3242,
+  groundOutsideLip: 0x3d4759,
+  groundLip: 0x2a3444,
+  rubble: 0x39445a,
+  rubbleOutside: 0x4a5468,
+  crack: 0x141a24,
+  rock: 0x1a212c,
+  rockLip: 0x2f3947,
+  caveDark: 0x070a0f,
 } as const;
 
 /** The last ten seconds, when the vignette starts closing in (PRD FR-1.2). */
@@ -52,11 +61,13 @@ export class Renderer {
   private enemyGfx = new Graphics();
   private fxGfx = new Graphics();
   private floorGfx = new Graphics();
+  private caveGfx = new Graphics();
   private vignette = new Graphics();
   private airBar = new Graphics();
   private healthBar = new Graphics();
   private airText: Text;
   private debugText: Text;
+  private promptText: Text;
   private debug = false;
   private art: SpriteSet;
   /** One sprite per enemy, reused across ticks rather than rebuilt. */
@@ -79,6 +90,18 @@ export class Renderer {
     this.airText = new Text({ text: "", style: hudStyle });
     this.airText.anchor.set(0.5, 0);
 
+    this.promptText = new Text({
+      text: "",
+      style: new TextStyle({
+        fontFamily: "ui-monospace, Menlo, Consolas, monospace",
+        fontSize: 15,
+        fontWeight: "700",
+        fill: COLOR.air,
+        letterSpacing: 2,
+      }),
+    });
+    this.promptText.anchor.set(0.5, 0);
+
     this.debugText = new Text({
       text: "",
       style: new TextStyle({
@@ -89,6 +112,7 @@ export class Renderer {
     });
 
     this.world.addChild(
+      this.caveGfx,
       this.floorGfx,
       this.enemyGfx,
       this.playerGfx,
@@ -101,6 +125,7 @@ export class Renderer {
       this.airBar,
       this.healthBar,
       this.airText,
+      this.promptText,
       this.debugText,
     );
   }
@@ -151,6 +176,7 @@ export class Renderer {
     this.particles.update(dt);
     this.particles.draw();
 
+    this.drawCave(state);
     this.drawFloor();
     this.drawEnemies(state);
     this.drawPlayer(state, x, y);
@@ -219,8 +245,20 @@ export class Renderer {
     }
   }
 
+  /**
+   * Stable pseudo-random from an integer. Used to scatter ground detail
+   * without storing any of it — the same x always produces the same rock, so
+   * the floor never shimmers between frames.
+   */
+  private static noise(i: number): number {
+    let t = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b);
+    t ^= t >>> 13;
+    t = Math.imul(t, 0xc2b2ae35);
+    return ((t ^ (t >>> 16)) >>> 0) / 4294967296;
+  }
+
   private drawFloor(): void {
-    const { floorY, width } = tuning.room;
+    const { floorY, width, entranceX } = tuning.room;
     const tile = this.art.frame("tile.floor");
 
     if (tile) {
@@ -237,8 +275,111 @@ export class Renderer {
       return;
     }
 
-    this.floorGfx.clear();
-    this.floorGfx.rect(0, floorY, width, 720 - floorY).fill(COLOR.floor);
+    const g = this.floorGfx;
+    g.clear();
+
+    // Outside is paler and dustier; inside the cave is darker and colder. The
+    // seam sits exactly on the entrance, so the floor itself tells you which
+    // side of the threshold you are standing on.
+    g.rect(0, floorY, entranceX, 720 - floorY).fill(COLOR.groundOutside);
+    g.rect(entranceX, floorY, width - entranceX, 720 - floorY).fill(
+      COLOR.floor,
+    );
+
+    // A lit top edge, so the ground reads as a surface rather than a block.
+    g.rect(0, floorY, entranceX, 3).fill(COLOR.groundOutsideLip);
+    g.rect(entranceX, floorY, width - entranceX, 3).fill(COLOR.groundLip);
+
+    // Scattered rubble and cracks. Deterministic, so nothing flickers.
+    for (let i = 0; i < 150; i++) {
+      const n = Renderer.noise(i);
+      const x = n * width;
+      const inside = x > entranceX;
+      const n2 = Renderer.noise(i + 977);
+      const n3 = Renderer.noise(i + 1861);
+
+      if (n3 < 0.55) {
+        // pebble
+        const size = 2 + Math.floor(n2 * 4);
+        g.rect(x, floorY + 6 + n2 * 90, size, Math.max(1, size - 1)).fill({
+          color: inside ? COLOR.rubble : COLOR.rubbleOutside,
+          alpha: 0.5 + n2 * 0.4,
+        });
+      } else if (n3 < 0.85) {
+        // crack
+        const len = 10 + n2 * 34;
+        g.moveTo(x, floorY + 8 + n2 * 70)
+          .lineTo(x + len * (n2 > 0.5 ? 1 : -1), floorY + 14 + n2 * 76)
+          .stroke({ color: COLOR.crack, width: 1, alpha: 0.4 });
+      } else {
+        // a larger embedded stone, lit on top
+        const w = 6 + n2 * 10;
+        const yy = floorY + 10 + n2 * 80;
+        g.rect(x, yy, w, 4).fill({ color: COLOR.rubble, alpha: 0.55 });
+        g.rect(x, yy, w, 1).fill({ color: COLOR.groundLip, alpha: 0.5 });
+      }
+    }
+  }
+
+  /**
+   * The cave mouth. Drawn behind everything, as a dark opening bitten out of a
+   * rock face, with jagged teeth top and bottom so the threshold is obvious
+   * from across the screen.
+   */
+  private drawCave(state: SimState): void {
+    const { floorY, entranceX, width } = tuning.room;
+    const g = this.caveGfx;
+    g.clear();
+
+    const mouthTop = floorY - 250;
+    const rockRight = width;
+
+    // Rock face filling everything right of the entrance, with the opening cut
+    // out of it. Drawing the wall and then the hole keeps the edge crisp.
+    g.rect(entranceX - 26, mouthTop - 90, rockRight - entranceX + 26, 90).fill(
+      COLOR.rock,
+    );
+    g.rect(entranceX - 26, mouthTop - 90, 26, floorY - mouthTop + 90).fill(
+      COLOR.rock,
+    );
+
+    // The dark interior.
+    g.rect(entranceX, mouthTop, rockRight - entranceX, floorY - mouthTop).fill(
+      COLOR.caveDark,
+    );
+
+    // Stalactites hanging from the lintel, and stumps rising from the floor.
+    for (let i = 0; i < 26; i++) {
+      const n = Renderer.noise(i + 400);
+      const x = entranceX + 10 + n * (rockRight - entranceX - 20);
+      const drop = 12 + Renderer.noise(i + 700) * 46;
+      g.moveTo(x - 7, mouthTop)
+        .lineTo(x, mouthTop + drop)
+        .lineTo(x + 7, mouthTop)
+        .fill(COLOR.rock);
+    }
+    for (let i = 0; i < 10; i++) {
+      const n = Renderer.noise(i + 1200);
+      const x = entranceX + 20 + n * (rockRight - entranceX - 40);
+      const rise = 10 + Renderer.noise(i + 1500) * 26;
+      g.moveTo(x - 6, floorY)
+        .lineTo(x, floorY - rise)
+        .lineTo(x + 6, floorY)
+        .fill(COLOR.rock);
+    }
+
+    // The jamb itself, lit on the outside face.
+    g.rect(entranceX - 4, mouthTop, 4, floorY - mouthTop).fill(COLOR.rockLip);
+
+    // Until you step in, the mouth is marked. Once inside, the marker goes —
+    // it is a threshold, not a signpost you keep looking at.
+    if (!state.entered) {
+      const pulse = 0.45 + 0.25 * Math.sin(state.tick / 12);
+      g.rect(entranceX - 2, mouthTop, 3, floorY - mouthTop).fill({
+        color: COLOR.air,
+        alpha: pulse,
+      });
+    }
   }
 
   /**
@@ -523,7 +664,7 @@ export class Renderer {
 
   private drawAir(state: SimState): void {
     const pct = state.airCapacity === 0 ? 0 : state.air / state.airCapacity;
-    const low = state.air <= VIGNETTE_TICKS;
+    const low = state.entered && state.air <= VIGNETTE_TICKS;
     const barWidth = 420;
     const left = (tuning.room.width - barWidth) / 2;
 
@@ -531,22 +672,33 @@ export class Renderer {
     this.airBar
       .rect(left, 62, barWidth, 8)
       .fill({ color: 0xffffff, alpha: 0.08 });
-    this.airBar
-      .rect(left, 62, barWidth * pct, 8)
-      .fill(low ? COLOR.airLow : COLOR.air);
+    this.airBar.rect(left, 62, barWidth * pct, 8).fill({
+      color: low ? COLOR.airLow : COLOR.air,
+      // Dimmed until the run starts, so a full bar outside does not read as a
+      // clock that is already ticking.
+      alpha: state.entered ? 1 : 0.35,
+    });
 
     // PRD FR-1.1: large, centre-top, always visible.
     const seconds = state.air / 60;
     this.airText.text = seconds >= 10 ? seconds.toFixed(0) : seconds.toFixed(1);
-    this.airText.style.fill = low ? COLOR.airLow : COLOR.hud;
+    this.airText.style.fill = low
+      ? COLOR.airLow
+      : state.entered
+        ? COLOR.hud
+        : COLOR.playerDashing;
     this.airText.position.set(tuning.room.width / 2, 20);
+
+    // Outside, say plainly that the clock has not started. The threshold is
+    // the decision; it should not be something the player discovers by dying.
+    this.promptText.visible = !state.entered;
+    if (!state.entered) {
+      this.promptText.text = "THE AIR ONLY BURNS INSIDE  →";
+      this.promptText.position.set(tuning.room.width / 2, 108);
+      this.promptText.alpha = 0.5 + 0.3 * Math.sin(state.tick / 14);
+    }
   }
 
-  /**
-   * One-tick feedback. Events are cleared by the sim every tick, so these are
-   * drawn as instantaneous flashes rather than tracked as animation state —
-   * keeping timing-dependent state out of the view (ARCH AD-5).
-   */
   /**
    * A crescent slash sweeping through its arc. Drawn as a stack of strokes at
    * decreasing radius so it reads as a blade trail rather than a shape — the

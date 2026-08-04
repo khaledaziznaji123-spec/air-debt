@@ -58,7 +58,9 @@ export function createInitialState(
     airCapacity: airTicks,
     // Close enough that the first exchange happens within a couple of seconds —
     // at a 30-second base tank, walking to the fight is most of the run.
-    enemies: [goblin(560), goblin(920)],
+    // All inside the cave. Nothing waits for you in the open.
+    enemies: [goblin(700), goblin(1010)],
+    entered: false,
     events: [],
     player: {
       x: tuning.room.playerSpawnX,

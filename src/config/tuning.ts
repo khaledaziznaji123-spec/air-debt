@@ -65,7 +65,7 @@ export const tuning = {
    */
   movement: {
     /** Horizontal run speed. */
-    runSpeed: 3.2,
+    runSpeed: 4.3,
     /** Upward impulse applied on the jump tick. Tall enough to clear a goblin
      *  and to give the smash-down a real drop to fall through. */
     jumpImpulse: 14.2,
@@ -85,11 +85,17 @@ export const tuning = {
     crouchSpeedScale: 0.45,
   },
 
-  /** The playfield for the first slice — a single flat room. */
+  /** The playfield for the first slice. */
   room: {
     width: 1280,
     floorY: 560,
-    playerSpawnX: 200,
+    playerSpawnX: 120,
+    /**
+     * The cave mouth. Everything left of it is outside: no air drain, nothing
+     * hunting you. Crossing it starts the run — which is what makes stepping
+     * in a decision rather than a loading screen (PRD FR-17).
+     */
+    entranceX: 430,
   },
 
   /**

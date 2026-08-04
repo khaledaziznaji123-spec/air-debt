@@ -4,6 +4,12 @@ import { createInitialState, step, replay, Intent } from "./index.ts";
 import { createRng, deriveSeed } from "./rng.ts";
 import type { InputRecord } from "./intents.ts";
 import { tuning } from "../config/tuning.ts";
+import type { SimState } from "./types.ts";
+
+/** A run already underway — air only burns once the cave has been entered. */
+function started(airTicks?: number): SimState {
+  return { ...createInitialState(airTicks), entered: true };
+}
 
 /**
  * These guard ARCH AD-1, AD-4 and AD-7. If any of them fail, replay validation
@@ -73,7 +79,7 @@ test("step does not mutate the state it is given", () => {
 });
 
 test("air drains one tick per tick, and reaching zero transforms rather than kills", () => {
-  let state = createInitialState(5);
+  let state = started(5);
   for (let i = 0; i < 5; i++) state = step(state, Intent.None);
   assert.equal(state.air, 0);
   assert.equal(
@@ -84,7 +90,7 @@ test("air drains one tick per tick, and reaching zero transforms rather than kil
 });
 
 test("a finished run is a fixed point", () => {
-  let state = createInitialState(1);
+  let state = started(1);
   state = step(state, Intent.None);
   assert.equal(state.outcome, "transformed");
   const after = step(state, Intent.Right | Intent.Jump);
@@ -97,7 +103,7 @@ test("a finished run is a fixed point", () => {
 });
 
 test("the player cannot leave the room", () => {
-  let state = createInitialState(6000);
+  let state = started(6000);
   for (let i = 0; i < 2000; i++) state = step(state, Intent.Left);
   assert.ok(state.player.x >= tuning.player.width / 2);
   for (let i = 0; i < 4000; i++) state = step(state, Intent.Right);
@@ -105,7 +111,7 @@ test("the player cannot leave the room", () => {
 });
 
 test("a mistimed block costs more than the parry window it was aiming for", () => {
-  let state = createInitialState(600);
+  let state = started(600);
   state = step(state, Intent.Block);
   const { parryWindow, mistimePunish } = tuning.combat;
   assert.equal(state.player.action.kind, "block");
@@ -117,7 +123,7 @@ test("a mistimed block costs more than the parry window it was aiming for", () =
 });
 
 test("slide cancels a committed attack", () => {
-  let state = createInitialState(600);
+  let state = started(600);
   state = step(state, Intent.Attack);
   assert.equal(state.player.action.kind, "attack");
   state = step(state, Intent.Attack | Intent.Slide);

@@ -96,6 +96,11 @@ export type SimState = {
   airCapacity: number;
   player: Player;
   enemies: readonly Enemy[];
+  /**
+   * False until the player crosses the cave mouth. Outside, air does not drain
+   * and nothing moves — the clock is the dungeon's, not the game's.
+   */
+  entered: boolean;
   outcome: RunOutcome;
   /** The intents held last tick, so the reducer can detect presses. */
   previousIntents: Intents;
@@ -107,6 +112,7 @@ export type SimState = {
 };
 
 export type SimEvent =
+  | { type: "entered" }
   | { type: "parry"; x: number; y: number }
   | { type: "playerHit"; damage: number }
   | { type: "enemyHit"; damage: number; x: number; y: number }

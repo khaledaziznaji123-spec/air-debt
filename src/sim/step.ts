@@ -390,9 +390,16 @@ export function step(state: SimState, intents: Intents): SimState {
   };
 
   // ---------------------------------------------------------------- enemies
-  let enemies = state.enemies.map((e) =>
-    stepEnemy({ ...e, parriedThisTick: false }, player),
-  );
+  // Crossing the mouth starts the run. Everything downstream keys off this.
+  const entered = state.entered || x >= ROOM.entranceX;
+  if (entered && !state.entered) events.push({ type: "entered" });
+
+  // Nothing hunts you outside. The dungeon is what is dangerous, not the game.
+  let enemies = entered
+    ? state.enemies.map((e) =>
+        stepEnemy({ ...e, parriedThisTick: false }, player),
+      )
+    : state.enemies;
 
   // Player's swing lands.
   const swing = playerHitbox(player);
@@ -461,9 +468,11 @@ export function step(state: SimState, intents: Intents): SimState {
   // ---------------------------------------------------------------- outcome
   // PRD FR-1.3: air reaching zero is transformation, not death. Different in
   // kind, and checked first because it is the run's own clock running out.
-  const air = state.air > 0 ? state.air - 1 : 0;
+  // PRD FR-17: the timer is the air in the mask, so it only runs while the
+  // mask is being used. Standing outside costs nothing.
+  const air = entered && state.air > 0 ? state.air - 1 : state.air;
   const outcome: SimState["outcome"] =
-    air === 0 ? "transformed" : hp <= 0 ? "died" : "running";
+    entered && air === 0 ? "transformed" : hp <= 0 ? "died" : "running";
 
   return {
     tick: state.tick + 1,
@@ -471,6 +480,7 @@ export function step(state: SimState, intents: Intents): SimState {
     airCapacity: state.airCapacity,
     player: { ...player, hp },
     enemies,
+    entered,
     outcome,
     previousIntents: intents,
     events,
