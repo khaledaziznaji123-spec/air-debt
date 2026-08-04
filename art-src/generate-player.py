@@ -17,7 +17,7 @@ from pathlib import Path
 from PIL import Image
 
 W, H = 32, 64
-OUT = Path(__file__).resolve().parent.parent / "public" / "art"
+OUT = Path(__file__).resolve().parent / "generated"
 OUT.mkdir(parents=True, exist_ok=True)
 
 # Sampled from the reference, then tightened for cohesion.

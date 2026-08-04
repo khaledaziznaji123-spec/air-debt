@@ -89,10 +89,14 @@ export const tuning = {
     playerSpawnX: 200,
   },
 
-  /** Player body, in world units. Hurtbox, not sprite (see addendum). */
+  /**
+   * Player body, in world units. This is the HURTBOX, not the sprite — the art
+   * is 48x96 and deliberately overhangs, so hair and swinging arms never take
+   * a hit (see addendum).
+   */
   player: {
-    width: 28,
-    height: 56,
+    width: 30,
+    height: 82,
     maxHp: 100,
     /** Sword damage per connecting hit. */
     attackDamage: 34,

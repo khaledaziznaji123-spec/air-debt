@@ -33,9 +33,11 @@ type SpriteDef = {
  * world units in `tuning.ts` 1:1, so nothing needs scaling.
  */
 export const SPRITE_MANIFEST: Record<SpriteKey, SpriteDef> = {
-  "player.idle": { path: "/art/player-idle.png", width: 32, height: 64, frames: 1 },
-  "player.run": { path: "/art/player-run.png", width: 32, height: 64, frames: 6, ticksPerFrame: 5 },
-  "player.attack": { path: "/art/player-attack.png", width: 32, height: 64, frames: 4 },
+  "player.idle": { path: "/art/player-idle.png", width: 48, height: 96, frames: 1 },
+  "player.run": { path: "/art/player-run.png", width: 48, height: 96, frames: 6, ticksPerFrame: 6 },
+  // No attack animation yet. Absent art falls back to idle, and the swing
+  // hitbox still draws, so the attack stays readable meanwhile.
+  "player.attack": { path: "/art/player-attack.png", width: 48, height: 96, frames: 4 },
   "enemy.goblin.idle": { path: "/art/goblin-idle.png", width: 32, height: 48, frames: 1 },
   "enemy.goblin.windup": { path: "/art/goblin-windup.png", width: 32, height: 48, frames: 1 },
   "tile.floor": { path: "/art/tile-floor.png", width: 32, height: 32, frames: 1 },
