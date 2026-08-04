@@ -47,8 +47,14 @@ test("a diverging input changes the trajectory", () => {
   // the path but the player lands back on the floor, so final states can
   // legitimately converge. Replay validation compares runs, not endpoints.
   const base = scriptedLog();
-  const altered = base.map((r) => (r.tick === 12 ? { ...r, intents: Intent.Right } : r));
-  assert.notEqual(trajectory(base), trajectory(altered), "replay must be sensitive to its inputs");
+  const altered = base.map((r) =>
+    r.tick === 12 ? { ...r, intents: Intent.Right } : r,
+  );
+  assert.notEqual(
+    trajectory(base),
+    trajectory(altered),
+    "replay must be sensitive to its inputs",
+  );
 });
 
 test("identical logs produce identical trajectories, not just identical endpoints", () => {
@@ -59,14 +65,22 @@ test("step does not mutate the state it is given", () => {
   const before = createInitialState();
   const snapshot = structuredClone(before);
   step(before, Intent.Right | Intent.Jump);
-  assert.deepEqual(before, snapshot, "ARCH AD-1: the reducer returns new state, it does not mutate");
+  assert.deepEqual(
+    before,
+    snapshot,
+    "ARCH AD-1: the reducer returns new state, it does not mutate",
+  );
 });
 
 test("air drains one tick per tick, and reaching zero transforms rather than kills", () => {
   let state = createInitialState(5);
   for (let i = 0; i < 5; i++) state = step(state, Intent.None);
   assert.equal(state.air, 0);
-  assert.equal(state.outcome, "transformed", "PRD FR-1.3: running out of air is not a death");
+  assert.equal(
+    state.outcome,
+    "transformed",
+    "PRD FR-1.3: running out of air is not a death",
+  );
 });
 
 test("a finished run is a fixed point", () => {
@@ -74,7 +88,11 @@ test("a finished run is a fixed point", () => {
   state = step(state, Intent.None);
   assert.equal(state.outcome, "transformed");
   const after = step(state, Intent.Right | Intent.Jump);
-  assert.equal(after.player.x, state.player.x, "a transformed player does not keep moving");
+  assert.equal(
+    after.player.x,
+    state.player.x,
+    "a transformed player does not keep moving",
+  );
   assert.equal(after.outcome, "transformed");
 });
 
@@ -103,7 +121,11 @@ test("slide cancels a committed attack", () => {
   state = step(state, Intent.Attack);
   assert.equal(state.player.action.kind, "attack");
   state = step(state, Intent.Attack | Intent.Slide);
-  assert.equal(state.player.action.kind, null, "PRD FR-5.10: slide interrupts the swing");
+  assert.equal(
+    state.player.action.kind,
+    null,
+    "PRD FR-5.10: slide interrupts the swing",
+  );
   assert.ok(state.player.dashTicks > 0);
 });
 

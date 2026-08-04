@@ -10,7 +10,15 @@
  * rendering concern that must never feed back into the core.
  */
 
-import { Application, Container, Graphics, Sprite, Text, TextStyle, TilingSprite } from "pixi.js";
+import {
+  Application,
+  Container,
+  Graphics,
+  Sprite,
+  Text,
+  TextStyle,
+  TilingSprite,
+} from "pixi.js";
 import { tuning } from "../config/tuning.ts";
 import { playerHitbox, type SimState } from "../sim/index.ts";
 import { SpriteSet } from "./sprites.ts";
@@ -77,7 +85,12 @@ export class Renderer {
       }),
     });
 
-    this.world.addChild(this.floorGfx, this.enemyGfx, this.playerGfx, this.fxGfx);
+    this.world.addChild(
+      this.floorGfx,
+      this.enemyGfx,
+      this.playerGfx,
+      this.fxGfx,
+    );
     this.app.stage.addChild(
       this.world,
       this.vignette,
@@ -144,7 +157,7 @@ export class Renderer {
         `action   ${p.action.kind ?? "-"} (lockout ${p.action.lockout})`,
         `outcome  ${state.outcome}`,
         "",
-        `art      ${this.art.loaded.size}/6 loaded`,
+        `art      ${this.art.loaded.size}/7 loaded`,
         ...this.art.issues.map((w) => `  ! ${w}`),
       ].join("\n");
     }
@@ -156,7 +169,11 @@ export class Renderer {
 
     if (tile) {
       if (!this.floorTile) {
-        this.floorTile = new TilingSprite({ texture: tile, width, height: 720 - floorY });
+        this.floorTile = new TilingSprite({
+          texture: tile,
+          width,
+          height: 720 - floorY,
+        });
         this.floorTile.position.set(0, floorY);
         this.world.addChildAt(this.floorTile, 0);
       }
@@ -191,8 +208,19 @@ export class Renderer {
         if (sprite.visible) {
           // The wind-up pose is what the player is reading — use it whenever
           // the goblin is committed, not only during the telegraph itself.
-          const committed = e.phase === "telegraphing" || e.phase === "striking";
-          sprite.texture = (committed ? (windupArt ?? idleArt) : idleArt)!;
+          const committed =
+            e.phase === "telegraphing" || e.phase === "striking";
+          const walking = e.phase === "approaching";
+          sprite.texture = (
+            committed
+              ? (windupArt ?? idleArt)
+              : walking
+                ? (this.art.frameAtTick(
+                    "enemy.goblin.walk",
+                    state.tick + i * 13,
+                  ) ?? idleArt)
+                : idleArt
+          )!;
           sprite.position.set(e.x, e.y);
           sprite.scale.x = e.facing;
         }
@@ -231,7 +259,9 @@ export class Renderer {
               ? COLOR.enemyStaggered
               : COLOR.enemy;
 
-      this.enemyGfx.rect(e.x - width / 2, e.y - height, width, height).fill(colour);
+      this.enemyGfx
+        .rect(e.x - width / 2, e.y - height, width, height)
+        .fill(colour);
 
       // Wind-up bar, so the tell is legible before there is animation to carry it.
       if (e.phase === "telegraphing") {
@@ -261,10 +291,17 @@ export class Renderer {
   private playerFrame(state: SimState) {
     const p = state.player;
 
-    if (p.action.kind === "attack" && this.art.has("player.attack")) {
-      const total =
-        tuning.player.attackStartup + tuning.player.attackActive + tuning.player.attackRecovery;
-      return this.art.frameOverProgress("player.attack", p.action.elapsed / total);
+    if (p.action.kind === "attack") {
+      // Alternating swings, so a chain does not replay the same animation.
+      const key =
+        p.action.variant === 0 ? "player.attack.a" : "player.attack.b";
+      if (this.art.has(key)) {
+        const total =
+          tuning.player.attackStartup +
+          tuning.player.attackActive +
+          tuning.player.attackRecovery;
+        return this.art.frameOverProgress(key, p.action.elapsed / total);
+      }
     }
 
     const moving = Math.abs(p.vx) > 0.1 && p.stance !== "airborne";
@@ -278,7 +315,10 @@ export class Renderer {
   private drawPlayer(state: SimState, x: number, y: number): void {
     const { width, height } = tuning.player;
     const p = state.player;
-    const h = p.stance === "crouching" ? height * tuning.movement.crouchHeightScale : height;
+    const h =
+      p.stance === "crouching"
+        ? height * tuning.movement.crouchHeightScale
+        : height;
 
     const colour =
       p.action.kind === "block"
@@ -310,7 +350,12 @@ export class Renderer {
       this.playerGfx.rect(x - width / 2, y - h, width, h).fill(colour);
       // A facing tick, so direction is readable before there is art.
       this.playerGfx
-        .rect(x + (p.facing > 0 ? width / 2 : -width / 2 - 6), y - h * 0.7, 6, 4)
+        .rect(
+          x + (p.facing > 0 ? width / 2 : -width / 2 - 6),
+          y - h * 0.7,
+          6,
+          4,
+        )
         .fill(colour);
     }
 
@@ -320,11 +365,19 @@ export class Renderer {
     if (swing) {
       const dx = x - p.x; // follow the interpolated body
       this.playerGfx
-        .rect(swing.left + dx, swing.top, swing.right - swing.left, swing.bottom - swing.top)
+        .rect(
+          swing.left + dx,
+          swing.top,
+          swing.right - swing.left,
+          swing.bottom - swing.top,
+        )
         .fill({ color: COLOR.swing, alpha: 0.55 });
     } else if (p.action.kind === "attack" || p.action.kind === "stun") {
       // Wind-up and recovery, shown faintly so commitment is visible too.
-      const reach = p.action.kind === "stun" ? tuning.player.stunReach : tuning.player.attackReach;
+      const reach =
+        p.action.kind === "stun"
+          ? tuning.player.stunReach
+          : tuning.player.attackReach;
       const left = p.facing > 0 ? x : x - reach;
       this.playerGfx
         .rect(left, y - h * 0.8, reach, 6)
@@ -338,7 +391,11 @@ export class Renderer {
       const r = parrying ? 40 : 30;
       this.playerGfx
         .circle(x, y - h / 2, r)
-        .stroke({ width: parrying ? 4 : 2, color: parrying ? COLOR.parryFlash : COLOR.playerDashing, alpha: parrying ? 0.95 : 0.4 });
+        .stroke({
+          width: parrying ? 4 : 2,
+          color: parrying ? COLOR.parryFlash : COLOR.playerDashing,
+          alpha: parrying ? 0.95 : 0.4,
+        });
     }
   }
 
@@ -349,8 +406,12 @@ export class Renderer {
     const left = (tuning.room.width - barWidth) / 2;
 
     this.airBar.clear();
-    this.airBar.rect(left, 62, barWidth, 8).fill({ color: 0xffffff, alpha: 0.08 });
-    this.airBar.rect(left, 62, barWidth * pct, 8).fill(low ? COLOR.airLow : COLOR.air);
+    this.airBar
+      .rect(left, 62, barWidth, 8)
+      .fill({ color: 0xffffff, alpha: 0.08 });
+    this.airBar
+      .rect(left, 62, barWidth * pct, 8)
+      .fill(low ? COLOR.airLow : COLOR.air);
 
     // PRD FR-1.1: large, centre-top, always visible.
     const seconds = state.air / 60;
@@ -369,10 +430,16 @@ export class Renderer {
     for (const event of state.events) {
       if (event.type === "parry") {
         // The parry has to feel like the best thing that can happen to you.
-        this.fxGfx.circle(event.x, event.y, 46).fill({ color: COLOR.parryFlash, alpha: 0.5 });
-        this.fxGfx.circle(event.x, event.y, 74).fill({ color: COLOR.enemyStaggered, alpha: 0.22 });
+        this.fxGfx
+          .circle(event.x, event.y, 46)
+          .fill({ color: COLOR.parryFlash, alpha: 0.5 });
+        this.fxGfx
+          .circle(event.x, event.y, 74)
+          .fill({ color: COLOR.enemyStaggered, alpha: 0.22 });
       } else if (event.type === "enemyHit") {
-        this.fxGfx.circle(event.x, event.y, 22).fill({ color: COLOR.enemyStriking, alpha: 0.45 });
+        this.fxGfx
+          .circle(event.x, event.y, 22)
+          .fill({ color: COLOR.enemyStriking, alpha: 0.45 });
       } else if (event.type === "playerHit") {
         this.fxGfx
           .rect(0, 0, tuning.room.width, 720)
@@ -385,7 +452,9 @@ export class Renderer {
     const pct = state.player.hp / tuning.player.maxHp;
     const barWidth = 220;
     this.healthBar.clear();
-    this.healthBar.rect(24, 24, barWidth, 10).fill({ color: 0xffffff, alpha: 0.08 });
+    this.healthBar
+      .rect(24, 24, barWidth, 10)
+      .fill({ color: 0xffffff, alpha: 0.08 });
     this.healthBar
       .rect(24, 24, barWidth * Math.max(pct, 0), 10)
       .fill(pct > 0.35 ? COLOR.enemyStaggered : COLOR.enemyStriking);

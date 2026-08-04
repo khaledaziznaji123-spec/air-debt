@@ -15,7 +15,8 @@ function fakeWindow() {
       listeners.get(type)?.delete(fn);
     },
     fire(type: string, code: string) {
-      for (const fn of listeners.get(type) ?? []) fn({ code, preventDefault() {} });
+      for (const fn of listeners.get(type) ?? [])
+        fn({ code, preventDefault() {} });
     },
   };
 }
@@ -94,7 +95,11 @@ test("moving does not prevent attacking", () => {
   w.fire("keydown", "KeyJ");
 
   const state = step(createInitialState(600), input.read());
-  assert.equal(state.player.action.kind, "attack", "running and swinging must compose");
+  assert.equal(
+    state.player.action.kind,
+    "attack",
+    "running and swinging must compose",
+  );
   assert.ok(state.player.vx > 0);
 });
 
@@ -104,6 +109,10 @@ test("Q attacks, and J still does too", () => {
     const input = new KeyboardInput();
     input.attach(w as unknown as Window);
     w.fire("keydown", code);
-    assert.equal(input.read() & Intent.Attack, Intent.Attack, `${code} should attack`);
+    assert.equal(
+      input.read() & Intent.Attack,
+      Intent.Attack,
+      `${code} should attack`,
+    );
   }
 });

@@ -49,7 +49,9 @@ function goblin(x: number): SimState["enemies"][number] {
   };
 }
 
-export function createInitialState(airTicks: number = tuning.air.base): SimState {
+export function createInitialState(
+  airTicks: number = tuning.air.base,
+): SimState {
   return {
     tick: 0,
     air: airTicks,
@@ -67,7 +69,9 @@ export function createInitialState(airTicks: number = tuning.air.base): SimState
       stance: "grounded",
       dashTicks: 0,
       hp: tuning.player.maxHp,
-      action: { kind: null, elapsed: 0, lockout: 0 },
+      action: { kind: null, elapsed: 0, lockout: 0, variant: 0 },
+      nextAttack: 0,
+      comboWindow: 0,
     },
     outcome: "running",
     previousIntents: Intent.None,
@@ -81,7 +85,10 @@ export function createInitialState(airTicks: number = tuning.air.base): SimState
  * submitted log and see what actually happened (PRD FR-15.7, ARCH AD-7).
  * Ticks with no recorded entry replay as "no intents held".
  */
-export function replay(log: readonly InputRecord[], airTicks?: number): SimState {
+export function replay(
+  log: readonly InputRecord[],
+  airTicks?: number,
+): SimState {
   let state = createInitialState(airTicks);
   if (log.length === 0) return state;
 

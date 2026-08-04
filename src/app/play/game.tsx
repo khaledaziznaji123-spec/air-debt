@@ -11,7 +11,13 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { createInitialState, step, Intent, type SimState, type InputRecord } from "@/sim";
+import {
+  createInitialState,
+  step,
+  Intent,
+  type SimState,
+  type InputRecord,
+} from "@/sim";
 import { KeyboardInput } from "@/render/keyboard";
 import { Renderer } from "@/render/renderer";
 import { TICK_HZ, tuning } from "@/config/tuning";
@@ -94,7 +100,10 @@ export default function Game() {
         lastFrameMs = nowMs;
 
         let ticksThisFrame = 0;
-        while (accumulator >= MS_PER_TICK && ticksThisFrame < MAX_CATCHUP_TICKS) {
+        while (
+          accumulator >= MS_PER_TICK &&
+          ticksThisFrame < MAX_CATCHUP_TICKS
+        ) {
           const intents = input.read();
           if (intents !== state.previousIntents) {
             log.push({ tick: state.tick, intents });
@@ -131,18 +140,24 @@ export default function Game() {
         <canvas ref={canvasRef} className="h-full w-full rounded-lg" />
         {renderError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border border-[#e56b6f]/40 bg-black/80 p-8 text-center">
-            <p className="text-lg font-bold text-[#e56b6f]">The renderer could not start</p>
-            <p className="max-w-md text-sm text-[#8a94a6]">
-              This usually means WebGL is unavailable in this browser. The simulation is still
-              running underneath.
+            <p className="text-lg font-bold text-[#e56b6f]">
+              The renderer could not start
             </p>
-            <code className="mt-2 max-w-md text-xs break-words text-[#8a94a6]">{renderError}</code>
+            <p className="max-w-md text-sm text-[#8a94a6]">
+              This usually means WebGL is unavailable in this browser. The
+              simulation is still running underneath.
+            </p>
+            <code className="mt-2 max-w-md text-xs break-words text-[#8a94a6]">
+              {renderError}
+            </code>
           </div>
         )}
         {!renderError && outcome !== "running" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-lg bg-black/70">
             <p className="text-3xl font-bold text-[#e8edf5]">
-              {outcome === "transformed" ? "You breathed the virus." : "You died."}
+              {outcome === "transformed"
+                ? "You breathed the virus."
+                : "You died."}
             </p>
             <p className="text-sm text-[#8a94a6]">
               {outcome === "transformed"
@@ -176,7 +191,9 @@ export default function Game() {
               ].join(" ")}
             >
               <kbd className="font-mono text-sm font-bold">{key}</kbd>
-              <span className="text-[10px] tracking-wide uppercase">{label}</span>
+              <span className="text-[10px] tracking-wide uppercase">
+                {label}
+              </span>
             </div>
           );
         })}
@@ -184,11 +201,15 @@ export default function Game() {
 
       <div className="flex w-full max-w-[1280px] items-center justify-between text-xs text-[#8a94a6]">
         <p>
-          Press <span className="font-bold text-[#4ecdc4]">K</span> the moment a goblin&apos;s
-          swing lands — not when its wind-up bar starts.
+          Press <span className="font-bold text-[#4ecdc4]">K</span> the moment a
+          goblin&apos;s swing lands — not when its wind-up bar starts.
         </p>
         <label className="flex cursor-pointer items-center gap-2 select-none">
-          <input type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={debug}
+            onChange={(e) => setDebug(e.target.checked)}
+          />
           debug overlay
         </label>
       </div>

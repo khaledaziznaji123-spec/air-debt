@@ -10,11 +10,7 @@ import type { Intents } from "./intents.ts";
 
 /** What the player's body is doing. Drives which rules apply this tick. */
 export type PlayerStance =
-  | "grounded"
-  | "airborne"
-  | "crouching"
-  | "sliding"
-  | "backstepping";
+  "grounded" | "airborne" | "crouching" | "sliding" | "backstepping";
 
 /**
  * An action with startup / active / recovery phases, authored in ticks.
@@ -27,6 +23,11 @@ export type ActionState = {
   elapsed: number;
   /** Ticks until the player can act again. Zero means free. */
   lockout: number;
+  /**
+   * Which swing this is. Consecutive attacks alternate 0, 1, 0, 1 so the
+   * player sees two different animations rather than the same one repeating.
+   */
+  variant: 0 | 1;
 };
 
 export type Player = {
@@ -41,6 +42,10 @@ export type Player = {
   dashTicks: number;
   hp: number;
   action: ActionState;
+  /** Which swing the next attack will use. */
+  nextAttack: 0 | 1;
+  /** Ticks since the last swing ended. The chain resets once this runs out. */
+  comboWindow: number;
 };
 
 /**

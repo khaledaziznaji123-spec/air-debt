@@ -113,8 +113,10 @@ export const tuning = {
     attackStartup: s(0.1),
     /** How long the hitbox stays live. */
     attackActive: s(0.1),
-    /** Recovery after the swing. Long enough for the six-frame arc to read. */
+    /** Recovery after the swing. Long enough for the three-frame arc to read. */
     attackRecovery: s(0.24),
+    /** Grace after a swing in which the next press continues the chain. */
+    comboWindow: s(0.45),
     /** The stun attack: weak, slow, and the only guard-breaker (FR-5.6). */
     stunDamage: 8,
     stunStartup: s(0.3),
@@ -129,8 +131,10 @@ export const tuning = {
    */
   enemies: {
     goblin: {
-      width: 26,
-      height: 48,
+      // Hurtbox. The sprite is 48x64 and overhangs — ears and cleaver are not
+      // hittable, the body is.
+      width: 30,
+      height: 52,
       maxHp: 60,
       speed: 1.15,
       damage: 12,
@@ -170,7 +174,14 @@ export const tuning = {
  * to close the gap but small enough that the last tank upgrade still matters.
  */
 export function checkTimeBudget(t: typeof tuning = tuning) {
-  const { environmentTraverse, miniBoss, finalBoss, environmentCount, shortcutSaving, shortcutCount } = t.budget;
+  const {
+    environmentTraverse,
+    miniBoss,
+    finalBoss,
+    environmentCount,
+    shortcutSaving,
+    shortcutCount,
+  } = t.budget;
 
   const perEnvironment = environmentTraverse + miniBoss;
   const reachBoss = perEnvironment * environmentCount;

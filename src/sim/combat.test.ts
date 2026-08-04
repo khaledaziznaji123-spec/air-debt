@@ -1,12 +1,23 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createInitialState, step, Intent, type SimState, type Intents } from "./index.ts";
+import {
+  createInitialState,
+  step,
+  Intent,
+  playerHitbox,
+  type SimState,
+  type Intents,
+} from "./index.ts";
 import { tuning } from "../config/tuning.ts";
 
 const GOBLIN = tuning.enemies.goblin;
 
 /** Advance n ticks holding the same intents. */
-function run(state: SimState, ticks: number, intents: Intents = Intent.None): SimState {
+function run(
+  state: SimState,
+  ticks: number,
+  intents: Intents = Intent.None,
+): SimState {
   let s = state;
   for (let i = 0; i < ticks; i++) s = step(s, intents);
   return s;
@@ -17,16 +28,26 @@ function duel(): SimState {
   const base = createInitialState(60 * 60);
   return {
     ...base,
-    enemies: [{ ...base.enemies[0], x: base.player.x + GOBLIN.attackRange - 2, facing: -1 }],
+    enemies: [
+      {
+        ...base.enemies[0],
+        x: base.player.x + GOBLIN.attackRange - 2,
+        facing: -1,
+      },
+    ],
   };
 }
 
 /** Advance until the goblin is about to land its swing. */
-function untilStrike(state: SimState, intents: Intents = Intent.None): SimState {
+function untilStrike(
+  state: SimState,
+  intents: Intents = Intent.None,
+): SimState {
   let s = state;
   for (let i = 0; i < 200; i++) {
     s = step(s, intents);
-    if (s.enemies[0].phase === "striking" && s.enemies[0].phaseTicks === 0) return s;
+    if (s.enemies[0].phase === "striking" && s.enemies[0].phaseTicks === 0)
+      return s;
   }
   throw new Error("goblin never struck");
 }
@@ -34,7 +55,11 @@ function untilStrike(state: SimState, intents: Intents = Intent.None): SimState 
 test("a goblin telegraphs before it strikes", () => {
   let s = duel();
   s = run(s, 1);
-  assert.equal(s.enemies[0].phase, "telegraphing", "it must wind up, or the parry is unreadable");
+  assert.equal(
+    s.enemies[0].phase,
+    "telegraphing",
+    "it must wind up, or the parry is unreadable",
+  );
   // PRD FR-6.1: the tell has to be long enough to be a real read.
   assert.ok(GOBLIN.telegraph > tuning.combat.parryWindow);
 });
@@ -50,14 +75,21 @@ test("a parried swing damages the attacker instead and staggers it", () => {
   let s = duel();
   for (let i = 0; i < 200; i++) {
     const next = step(s, Intent.None);
-    if (next.enemies[0].phase === "striking" && next.enemies[0].phaseTicks === 0) {
+    if (
+      next.enemies[0].phase === "striking" &&
+      next.enemies[0].phaseTicks === 0
+    ) {
       // Re-run that tick with block held from one tick earlier.
       s = step(s, Intent.Block);
       break;
     }
     s = next;
   }
-  assert.equal(s.player.hp, tuning.player.maxHp, "PRD FR-5.8: a parry takes no damage");
+  assert.equal(
+    s.player.hp,
+    tuning.player.maxHp,
+    "PRD FR-5.8: a parry takes no damage",
+  );
   assert.equal(s.enemies[0].hp, GOBLIN.maxHp - tuning.parry.riposteDamage);
   assert.equal(s.enemies[0].phase, "staggered");
   assert.ok(s.events.some((e) => e.type === "parry"));
@@ -67,7 +99,10 @@ test("blocking too early does not parry — the window has passed by the time it
   let s = duel();
   s = step(s, Intent.Block); // committed immediately, long before the swing
   s = untilStrike(s);
-  assert.ok(s.player.hp < tuning.player.maxHp, "an expired block is not a parry");
+  assert.ok(
+    s.player.hp < tuning.player.maxHp,
+    "an expired block is not a parry",
+  );
 });
 
 test("the sword damages a goblin and enough hits kill it", () => {
@@ -125,5 +160,60 @@ test("combat stays deterministic", () => {
 
 test("events do not accumulate across ticks", () => {
   const s = run(untilStrike(duel()), 5);
-  assert.equal(s.events.length, 0, "events are per-tick, or state stops being a pure function");
+  assert.equal(
+    s.events.length,
+    0,
+    "events are per-tick, or state stops being a pure function",
+  );
+});
+
+test("consecutive attacks alternate between two swings", () => {
+  let s = duel();
+  const variants: number[] = [];
+  for (let round = 0; round < 4; round++) {
+    s = step(s, Intent.Attack);
+    variants.push(s.player.action.variant);
+    // Wait out the lockout but stay inside the combo window.
+    s = run(
+      s,
+      tuning.player.attackStartup +
+        tuning.player.attackActive +
+        tuning.player.attackRecovery,
+    );
+  }
+  assert.deepEqual(
+    variants,
+    [0, 1, 0, 1],
+    "a chain must not replay the same animation",
+  );
+});
+
+test("the chain resets after a pause, so the first press always looks the same", () => {
+  let s = duel();
+  s = step(s, Intent.Attack);
+  assert.equal(s.player.action.variant, 0);
+  // Long enough for the combo window to lapse.
+  s = run(s, 200);
+  s = step(s, Intent.Attack);
+  assert.equal(
+    s.player.action.variant,
+    0,
+    "after a pause the swing resets to the first",
+  );
+});
+
+test("the attack box is the sword, not the whole body", () => {
+  const s = step(duel(), Intent.Attack);
+  const p = {
+    ...s.player,
+    action: { ...s.player.action, elapsed: tuning.player.attackStartup },
+  };
+  const box = playerHitbox(p);
+  assert.ok(box, "the hitbox should be live during active frames");
+  const feet = p.y;
+  assert.ok(box.bottom < feet, "a swing must not reach the ground");
+  assert.ok(
+    feet - box.bottom >=
+      tuning.player.height * tuning.player.attackBoxBottom - 1,
+  );
 });

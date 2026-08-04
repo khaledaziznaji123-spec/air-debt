@@ -13,8 +13,10 @@ import { Assets, Rectangle, Texture } from "pixi.js";
 export type SpriteKey =
   | "player.idle"
   | "player.run"
-  | "player.attack"
+  | "player.attack.a"
+  | "player.attack.b"
   | "enemy.goblin.idle"
+  | "enemy.goblin.walk"
   | "enemy.goblin.windup"
   | "tile.floor";
 
@@ -33,14 +35,58 @@ type SpriteDef = {
  * world units in `tuning.ts` 1:1, so nothing needs scaling.
  */
 export const SPRITE_MANIFEST: Record<SpriteKey, SpriteDef> = {
-  "player.idle": { path: "/art/player-idle.png", width: 48, height: 96, frames: 1 },
-  "player.run": { path: "/art/player-run.png", width: 48, height: 96, frames: 6, ticksPerFrame: 6 },
-  // Wider frames than idle/run: the slash arcs extend well past the body. The
-  // character is still centred, so the anchor stays correct.
-  "player.attack": { path: "/art/player-attack.png", width: 88, height: 96, frames: 6 },
-  "enemy.goblin.idle": { path: "/art/goblin-idle.png", width: 32, height: 48, frames: 1 },
-  "enemy.goblin.windup": { path: "/art/goblin-windup.png", width: 32, height: 48, frames: 1 },
-  "tile.floor": { path: "/art/tile-floor.png", width: 32, height: 32, frames: 1 },
+  "player.idle": {
+    path: "/art/player-idle.png",
+    width: 48,
+    height: 96,
+    frames: 1,
+  },
+  "player.run": {
+    path: "/art/player-run.png",
+    width: 48,
+    height: 96,
+    frames: 6,
+    ticksPerFrame: 6,
+  },
+  // Two swings, alternating. Wider frames than idle/run because the slash arcs
+  // extend well past the body; the character stays centred so the anchor holds.
+  "player.attack.a": {
+    path: "/art/player-attack-a.png",
+    width: 88,
+    height: 96,
+    frames: 3,
+  },
+  "player.attack.b": {
+    path: "/art/player-attack-b.png",
+    width: 88,
+    height: 96,
+    frames: 3,
+  },
+  "enemy.goblin.idle": {
+    path: "/art/goblin-idle.png",
+    width: 48,
+    height: 64,
+    frames: 1,
+  },
+  "enemy.goblin.walk": {
+    path: "/art/goblin-walk.png",
+    width: 48,
+    height: 64,
+    frames: 4,
+    ticksPerFrame: 8,
+  },
+  "enemy.goblin.windup": {
+    path: "/art/goblin-windup.png",
+    width: 48,
+    height: 64,
+    frames: 1,
+  },
+  "tile.floor": {
+    path: "/art/tile-floor.png",
+    width: 32,
+    height: 32,
+    frames: 1,
+  },
 };
 
 export class SpriteSet {
@@ -106,7 +152,10 @@ export class SpriteSet {
 
           // Slice the strip. One frame still goes through this path, so there
           // is only one code path to get wrong.
-          const usable = Math.max(1, Math.min(def.frames, Math.floor(sheet.width / def.width)));
+          const usable = Math.max(
+            1,
+            Math.min(def.frames, Math.floor(sheet.width / def.width)),
+          );
           const textures: Texture[] = [];
           for (let i = 0; i < usable; i++) {
             textures.push(

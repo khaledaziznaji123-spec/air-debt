@@ -11,17 +11,29 @@ import { tuning, checkTimeBudget, TICK_HZ } from "./tuning.ts";
 
 test("a maxed air tank alone cannot win — shortcuts are required", () => {
   const b = checkTimeBudget();
-  assert.equal(b.shortcutsAreRequired, true, "walking the whole dungeon on a full tank must still lose");
+  assert.equal(
+    b.shortcutsAreRequired,
+    true,
+    "walking the whole dungeon on a full tank must still lose",
+  );
 });
 
 test("with full shortcut coverage, a maxed player can win", () => {
   const b = checkTimeBudget();
-  assert.equal(b.winnable, true, "total shortcut savings must close the gap to the max tank");
+  assert.equal(
+    b.winnable,
+    true,
+    "total shortcut savings must close the gap to the max tank",
+  );
 });
 
 test("the final air tank upgrade is not dead progression", () => {
   const b = checkTimeBudget();
-  assert.equal(b.topUpgradeMatters, true, "a winning run must cost more than a one-upgrade-short tank");
+  assert.equal(
+    b.topUpgradeMatters,
+    true,
+    "a winning run must cost more than a one-upgrade-short tank",
+  );
 });
 
 test("the air curve reaches its ceiling in exactly the stated number of upgrades", () => {
@@ -50,6 +62,10 @@ test("all durations are whole ticks", () => {
     tuning.budget.shortcutSaving,
   ];
   for (const d of durations) {
-    assert.equal(Number.isInteger(d), true, `${d} is not a whole tick at ${TICK_HZ}Hz`);
+    assert.equal(
+      Number.isInteger(d),
+      true,
+      `${d} is not a whole tick at ${TICK_HZ}Hz`,
+    );
   }
 });

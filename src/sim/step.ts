@@ -12,7 +12,13 @@
 
 import { tuning } from "../config/tuning.ts";
 import { Intent, has, pressed, type Intents } from "./intents.ts";
-import type { ActionState, Enemy, Player, SimEvent, SimState } from "./types.ts";
+import type {
+  ActionState,
+  Enemy,
+  Player,
+  SimEvent,
+  SimState,
+} from "./types.ts";
 
 const {
   movement: MOVE,
@@ -29,11 +35,16 @@ const GOBLIN = ENEMY.goblin;
 export type Box = { left: number; right: number; top: number; bottom: number };
 
 function overlaps(a: Box, b: Box): boolean {
-  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  return (
+    a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
+  );
 }
 
 function playerBox(p: Player): Box {
-  const h = p.stance === "crouching" ? BODY.height * MOVE.crouchHeightScale : BODY.height;
+  const h =
+    p.stance === "crouching"
+      ? BODY.height * MOVE.crouchHeightScale
+      : BODY.height;
   return {
     left: p.x - BODY.width / 2,
     right: p.x + BODY.width / 2,
@@ -77,8 +88,14 @@ function swingBox(
 function stepAction(action: ActionState): ActionState {
   if (action.kind === null && action.lockout === 0) return action;
   const lockout = action.lockout > 0 ? action.lockout - 1 : 0;
-  if (lockout === 0) return { kind: null, elapsed: 0, lockout: 0 };
-  return { kind: action.kind, elapsed: action.elapsed + 1, lockout };
+  if (lockout === 0)
+    return { kind: null, elapsed: 0, lockout: 0, variant: action.variant };
+  return {
+    kind: action.kind,
+    elapsed: action.elapsed + 1,
+    lockout,
+    variant: action.variant,
+  };
 }
 
 function isBusy(p: Player): boolean {
@@ -98,7 +115,8 @@ export function isParrying(p: Player): boolean {
 export function playerHitbox(p: Player): Box | null {
   if (p.action.kind === "attack") {
     const t = p.action.elapsed;
-    if (t < BODY.attackStartup || t >= BODY.attackStartup + BODY.attackActive) return null;
+    if (t < BODY.attackStartup || t >= BODY.attackStartup + BODY.attackActive)
+      return null;
     return swingBox(
       p.x,
       p.y,
@@ -110,7 +128,8 @@ export function playerHitbox(p: Player): Box | null {
   }
   if (p.action.kind === "stun") {
     const t = p.action.elapsed;
-    if (t < BODY.stunStartup || t >= BODY.stunStartup + BODY.stunActive) return null;
+    if (t < BODY.stunStartup || t >= BODY.stunStartup + BODY.stunActive)
+      return null;
     return swingBox(
       p.x,
       p.y,
@@ -161,7 +180,8 @@ function stepEnemy(e: Enemy, player: Player): Enemy {
     case "idle":
     case "approaching":
     default: {
-      if (!e.verbs.attack || !e.verbs.move) return { ...e, phaseTicks: ticks, facing };
+      if (!e.verbs.attack || !e.verbs.move)
+        return { ...e, phaseTicks: ticks, facing };
       if (distance <= GOBLIN.attackRange) {
         return { ...e, phase: "telegraphing", phaseTicks: 0, facing };
       }
@@ -173,7 +193,12 @@ function stepEnemy(e: Enemy, player: Player): Enemy {
 
 export function step(state: SimState, intents: Intents): SimState {
   if (state.outcome !== "running") {
-    return { ...state, tick: state.tick + 1, previousIntents: intents, events: [] };
+    return {
+      ...state,
+      tick: state.tick + 1,
+      previousIntents: intents,
+      events: [],
+    };
   }
 
   const events: SimEvent[] = [];
@@ -194,7 +219,8 @@ export function step(state: SimState, intents: Intents): SimState {
 
   if (dashTicks === 0) {
     if (has(intents, Intent.Right) && !has(intents, Intent.Left)) facing = 1;
-    else if (has(intents, Intent.Left) && !has(intents, Intent.Right)) facing = -1;
+    else if (has(intents, Intent.Left) && !has(intents, Intent.Right))
+      facing = -1;
   }
 
   // Slide / backstep — context-sensitive (FR-5.2), and cancels a swing (FR-5.10).
@@ -208,27 +234,45 @@ export function step(state: SimState, intents: Intents): SimState {
       dashTicks = MOVE.backstepDuration;
       vx = -facing * MOVE.backstepSpeed;
     }
-    action = { kind: null, elapsed: 0, lockout: 0 };
+    action = { kind: null, elapsed: 0, lockout: 0, variant: action.variant };
   }
 
   // Block: the whole commitment is taken up front. A correct read parries; a
   // wrong one costs more than simply eating the hit. That asymmetry is why
   // panic compounds (PRD FR-5.7, FR-5.9).
   if (has(justPressed, Intent.Block) && !isBusy(prev)) {
-    action = { kind: "block", elapsed: 0, lockout: COMBAT.parryWindow + COMBAT.mistimePunish };
+    action = {
+      kind: "block",
+      elapsed: 0,
+      lockout: COMBAT.parryWindow + COMBAT.mistimePunish,
+      variant: 0,
+    };
   }
 
+  // Consecutive attacks alternate between two swings. The chain only continues
+  // while the window is open, so a swing after a pause always opens with the
+  // first — the player learns "the first press looks like this" rather than
+  // being surprised by whichever animation happened to be next.
+  let nextAttack = prev.nextAttack;
+  let comboWindow = prev.comboWindow > 0 ? prev.comboWindow - 1 : 0;
+  if (comboWindow === 0) nextAttack = 0;
+
   if (has(justPressed, Intent.Attack) && !isBusy(prev)) {
+    const total = BODY.attackStartup + BODY.attackActive + BODY.attackRecovery;
     action = {
       kind: "attack",
       elapsed: 0,
-      lockout: BODY.attackStartup + BODY.attackActive + BODY.attackRecovery,
+      lockout: total,
+      variant: nextAttack,
     };
+    nextAttack = nextAttack === 0 ? 1 : 0;
+    comboWindow = total + BODY.comboWindow;
   } else if (has(justPressed, Intent.Stun) && !isBusy(prev)) {
     action = {
       kind: "stun",
       elapsed: 0,
       lockout: BODY.stunStartup + BODY.stunActive + 14,
+      variant: 0,
     };
   }
 
@@ -266,19 +310,39 @@ export function step(state: SimState, intents: Intents): SimState {
           ? "crouching"
           : "grounded";
 
-  const player: Player = { x, y, vx, vy, facing, stance, dashTicks, hp, action };
+  const player: Player = {
+    x,
+    y,
+    vx,
+    vy,
+    facing,
+    stance,
+    dashTicks,
+    hp,
+    action,
+    nextAttack,
+    comboWindow,
+  };
 
   // ---------------------------------------------------------------- enemies
-  let enemies = state.enemies.map((e) => stepEnemy({ ...e, parriedThisTick: false }, player));
+  let enemies = state.enemies.map((e) =>
+    stepEnemy({ ...e, parriedThisTick: false }, player),
+  );
 
   // Player's swing lands.
   const swing = playerHitbox(player);
   if (swing) {
-    const damage = player.action.kind === "stun" ? BODY.stunDamage : BODY.attackDamage;
+    const damage =
+      player.action.kind === "stun" ? BODY.stunDamage : BODY.attackDamage;
     enemies = enemies.map((e) => {
       if (e.phase === "dead" || !overlaps(swing, enemyBox(e))) return e;
       const nextHp = e.hp - damage;
-      events.push({ type: "enemyHit", damage, x: e.x, y: e.y - GOBLIN.height / 2 });
+      events.push({
+        type: "enemyHit",
+        damage,
+        x: e.x,
+        y: e.y - GOBLIN.height / 2,
+      });
       if (nextHp <= 0) {
         events.push({ type: "enemyDied", x: e.x, y: e.y });
         return { ...e, hp: 0, phase: "dead" as const, phaseTicks: 0 };
@@ -307,9 +371,21 @@ export function step(state: SimState, intents: Intents): SimState {
       const nextHp = e.hp - PARRY.riposteDamage;
       if (nextHp <= 0) {
         events.push({ type: "enemyDied", x: e.x, y: e.y });
-        return { ...e, hp: 0, phase: "dead" as const, phaseTicks: 0, parriedThisTick: true };
+        return {
+          ...e,
+          hp: 0,
+          phase: "dead" as const,
+          phaseTicks: 0,
+          parriedThisTick: true,
+        };
       }
-      return { ...e, hp: nextHp, phase: "staggered" as const, phaseTicks: 0, parriedThisTick: true };
+      return {
+        ...e,
+        hp: nextHp,
+        phase: "staggered" as const,
+        phaseTicks: 0,
+        parriedThisTick: true,
+      };
     }
 
     hp -= GOBLIN.damage;
@@ -321,7 +397,8 @@ export function step(state: SimState, intents: Intents): SimState {
   // PRD FR-1.3: air reaching zero is transformation, not death. Different in
   // kind, and checked first because it is the run's own clock running out.
   const air = state.air > 0 ? state.air - 1 : 0;
-  const outcome: SimState["outcome"] = air === 0 ? "transformed" : hp <= 0 ? "died" : "running";
+  const outcome: SimState["outcome"] =
+    air === 0 ? "transformed" : hp <= 0 ? "died" : "running";
 
   return {
     tick: state.tick + 1,

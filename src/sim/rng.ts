@@ -46,5 +46,5 @@ export function createRng(seed: number): Rng {
  * this, tuning one system silently invalidates stored replays of every other.
  */
 export function deriveSeed(baseSeed: number, streamId: number): number {
-  return (Math.imul(baseSeed ^ streamId, 0x9e3779b1) >>> 0) || 1;
+  return Math.imul(baseSeed ^ streamId, 0x9e3779b1) >>> 0 || 1;
 }
