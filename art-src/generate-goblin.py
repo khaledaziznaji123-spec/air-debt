@@ -18,7 +18,7 @@ import math
 from pathlib import Path
 from pixel import Canvas, rgb, save_strip, save_preview
 
-W, H = 48, 64
+W, H = 48, 96
 OUT = Path(__file__).resolve().parent.parent / "public" / "art"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -44,7 +44,9 @@ OUTLINE = {
     P["lens"]: P["lens_sh"],
 }
 
-CX, GROUND, HIP, SHOULDER = 23, 60, 40, 28
+# Scaled to loom over the player: he is 82 units of hurtbox, this is 86. A
+# goblin that reads as smaller reads as harmless, which it is not.
+CX, GROUND, HIP, SHOULDER = 23, 92, 60, 40
 
 
 def canvas():
@@ -54,8 +56,8 @@ def canvas():
 def draw_leg(c, hip_x, foot_x, back=False):
     col = P["skin_sh"] if back else P["skin"]
     knee_x = (hip_x + foot_x) / 2 - 2  # knees bow outward
-    c.taper(hip_x, HIP, knee_x, (HIP + GROUND) / 2, 7, 5, col)
-    c.taper(knee_x, (HIP + GROUND) / 2, foot_x, GROUND - 2, 5, 4, col)
+    c.taper(hip_x, HIP, knee_x, (HIP + GROUND) / 2, 9, 7, col)
+    c.taper(knee_x, (HIP + GROUND) / 2, foot_x, GROUND - 3, 7, 5, col)
     c.rect(foot_x - 4, GROUND - 2, foot_x + 3, GROUND, P["rag_sh"])  # wrapped foot
     c.rect(foot_x - 4, GROUND - 3, foot_x + 1, GROUND - 3, P["rag"])
 
@@ -63,8 +65,8 @@ def draw_leg(c, hip_x, foot_x, back=False):
 def draw_arm(c, sh_x, hand_x, hand_y, back=False, weapon=False):
     col = P["skin_sh"] if back else P["skin"]
     ex, ey = (sh_x + hand_x) / 2, (SHOULDER + hand_y) / 2 + 2
-    c.taper(sh_x, SHOULDER, ex, ey, 5, 4, col)
-    c.taper(ex, ey, hand_x, hand_y, 4, 3, col)
+    c.taper(sh_x, SHOULDER, ex, ey, 7, 5, col)
+    c.taper(ex, ey, hand_x, hand_y, 5, 4, col)
     c.disc(hand_x, hand_y, 2, P["rag_sh"])
     if weapon:
         # A cleaver: broad, crude, nothing like the player's tapered blade.
@@ -78,7 +80,7 @@ def draw_body(c, hunch, bob):
     y = bob
 
     # torso: narrow chest, heavy shoulders, leaning with the hunch
-    c.taper(CX, HIP + y, x, SHOULDER + y, 13, 15, P["skin"])
+    c.taper(CX, HIP + y, x, SHOULDER + y, 17, 20, P["skin"])
     # rag wrap across the middle
     c.rect(x - 7, HIP + y - 9, x + 7, HIP + y - 4, P["rag"])
     c.taper(x - 8, HIP + y - 6, x + 6, SHOULDER + y + 3, 4, 4, P["rag_sh"])
@@ -91,9 +93,9 @@ def draw_head(c, hunch, bob, eyes_hot=False):
     # Heavy head carried forward of the shoulders — the opposite of the
     # player's upright, sealed posture.
     x = CX + hunch * 2 + 2
-    y = 17 + bob
+    y = 24 + bob
 
-    c.disc(x, y, 8, P["skin"])
+    c.disc(x, y, 10, P["skin"])
     c.rect(x - 10, y - 4, x - 6, y + 3, P["skin_sh"])   # back of skull
     # ears, deliberately different sizes
     c.taper(x - 7, y - 1, x - 14, y - 6, 5, 1, P["skin_sh"])
@@ -128,7 +130,7 @@ def frame(front_foot, back_foot, front_hand, back_hand,
 
 def idle(n=2):
     return [
-        frame(CX + 6, CX - 6, (CX + 9, 40 + (i == 1)), (CX - 9, 39), bob=(0, -1)[i])
+        frame(CX + 6, CX - 6, (CX + 11, 58 + (i == 1)), (CX - 11, 57), bob=(0, -1)[i])
         for i in range(n)
     ]
 
@@ -137,10 +139,10 @@ def walk(n=6):
     out = []
     for i in range(n):
         p = (i / n) * math.tau
-        sw = math.sin(p) * 8
+        sw = math.sin(p) * 10
         out.append(frame(
             CX + sw, CX - sw,
-            (CX + 8 - sw * 0.4, 41), (CX - 8 + sw * 0.4, 40),
+            (CX + 10 - sw * 0.4, 59), (CX - 10 + sw * 0.4, 58),
             hunch=3, bob=-1 if math.sin(p * 2) > 0.4 else 0,
         ))
     return out
@@ -150,7 +152,7 @@ def windup(n=2):
     """Rears back, cleaver overhead, eyes flaring. Must be unmistakable — the
     entire parry depends on reading this in a fraction of a second."""
     return [
-        frame(CX + 9, CX - 8, (CX + 2, 22 - i * 2), (CX - 11, 36),
+        frame(CX + 9, CX - 8, (CX + 2, 30 - i * 3), (CX - 13, 54),
               hunch=-4, bob=-2 - i, eyes_hot=True)
         for i in range(n)
     ]
@@ -158,14 +160,14 @@ def windup(n=2):
 
 def strike(n=2):
     return [
-        frame(CX + 11, CX - 5, (CX + 13 + i * 2, 40 + i * 4), (CX - 8, 40),
+        frame(CX + 11, CX - 5, (CX + 15 + i * 2, 56 + i * 5), (CX - 10, 58),
               hunch=5, bob=i, eyes_hot=True)
         for i in range(n)
     ]
 
 
 def stagger():
-    return [frame(CX - 2, CX - 11, (CX - 6, 44), (CX - 13, 38), hunch=-5, bob=2)]
+    return [frame(CX - 2, CX - 11, (CX - 6, 62), (CX - 14, 56), hunch=-5, bob=2)]
 
 
 save_strip(idle(), OUT / "goblin-idle.png", W, H)

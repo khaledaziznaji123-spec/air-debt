@@ -80,6 +80,8 @@ export const tuning = {
     backstepDuration: s(0.15),
     /** Crouch shrinks the hurtbox; height multiplier applied while held. */
     crouchHeightScale: 0.55,
+    /** Crouch-walking is possible but slow — the trade for a smaller profile. */
+    crouchSpeedScale: 0.45,
   },
 
   /** The playfield for the first slice — a single flat room. */
@@ -117,6 +119,20 @@ export const tuning = {
     attackRecovery: s(0.24),
     /** Grace after a swing in which the next press continues the chain. */
     comboWindow: s(0.45),
+    /**
+     * Smash-down (PRD FR-5.5): jump, then press crouch. The blade goes
+     * overhead and is driven into the floor on landing. Heavy, committal, and
+     * the only attack that hits a group.
+     */
+    smashDamage: 42,
+    /** Downward speed forced once the smash commits. */
+    smashFallSpeed: 22,
+    /** Half-width of the impact, centred on the player. Hits both sides. */
+    smashRadius: 52,
+    /** Frames the impact stays live after landing. */
+    smashActive: s(0.12),
+    /** Recovery once it lands. Long — this is a committal move. */
+    smashRecovery: s(0.42),
     /** The stun attack: weak, slow, and the only guard-breaker (FR-5.6). */
     stunDamage: 8,
     stunStartup: s(0.3),
@@ -131,10 +147,11 @@ export const tuning = {
    */
   enemies: {
     goblin: {
-      // Hurtbox. The sprite is 48x64 and overhangs — ears and cleaver are not
+      // Hurtbox. Bigger than the player's 30x82 — it should loom, not scale
+      // down. The 48x96 sprite still overhangs: ears and cleaver are not
       // hittable, the body is.
-      width: 30,
-      height: 52,
+      width: 34,
+      height: 86,
       maxHp: 60,
       speed: 1.15,
       damage: 12,

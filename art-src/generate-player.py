@@ -164,11 +164,12 @@ def draw_boot(c, x, y):
     c.rect(x - 3, y - 4, x + 2, y - 4, P["brass"])  # buckle strap
 
 
-def draw_leg(c, hip_x, foot_x, foot_y, back=False):
+def draw_leg(c, hip_x, foot_x, foot_y, back=False, hip_y=None, knee_out=0):
+    hip_y = HIP if hip_y is None else hip_y
     col = P["trs_sh"] if back else P["trs"]
-    knee_x = (hip_x + foot_x) / 2 + (2 if not back else 1)
-    knee_y = (HIP + foot_y) / 2
-    c.taper(hip_x, HIP, knee_x, knee_y, 7, 6, col)
+    knee_x = (hip_x + foot_x) / 2 + (2 if not back else 1) + knee_out
+    knee_y = (hip_y + foot_y) / 2
+    c.taper(hip_x, hip_y, knee_x, knee_y, 7, 6, col)
     c.taper(knee_x, knee_y, foot_x, foot_y - 5, 6, 4, col)
     draw_boot(c, foot_x, foot_y)
 
@@ -194,7 +195,7 @@ def draw_sword(c, hx, hy, ang, length=20):
     c.taper(gx + dy, gy - dx, tx, ty, 2, 1, P["met_hi"])               # fuller glint
 
 
-def draw_torso(c, lean=0, bob=0):
+def draw_torso(c, lean=0, bob=0, squat=0):
     x, y = CX + lean, bob
 
     # air tank, worn high on the back
@@ -206,7 +207,8 @@ def draw_torso(c, lean=0, bob=0):
     # coat body, flaring to a torn hem
     c.taper(x, SHOULDER + y, x, HIP + y - 2, 16, 14, P["coat"])
     for i, dx in enumerate((-9, -6, -2, 2, 6, 9)):
-        depth = (3, 5, 2, 6, 3, 4)[i]
+        # Hem rides up when crouching, so the bent legs stay visible.
+        depth = max(1, (3, 5, 2, 6, 3, 4)[i] - squat // 3)
         c.rect(x + dx - 1, HIP + y - 2, x + dx + 1, HIP + y - 2 + depth, P["coat_sh"])
 
     # chest strap and belt
@@ -254,16 +256,20 @@ def draw_head(c, lean=0, bob=0, lens_hot=False):
 
 
 def frame(front_foot, back_foot, front_hand, back_hand, sword_ang,
-          lean=0, bob=0, lens_hot=False, sword=True):
+          lean=0, bob=0, lens_hot=False, sword=True, squat=0, airborne=False):
+    """squat lowers the whole upper body and bends the knees outward, which is
+    what makes a crouch read as a crouch rather than a shorter person."""
     c = Canvas()
-    draw_leg(c, CX - 3, back_foot, GROUND, back=True)
-    draw_arm(c, CX - 7, back_hand[0], back_hand[1] + bob, back=True)
-    draw_torso(c, lean, bob)
-    draw_head(c, lean, bob, lens_hot)
-    draw_leg(c, CX + 3, front_foot, GROUND)
-    draw_arm(c, CX + 7, front_hand[0], front_hand[1] + bob)
+    ground = GROUND - (6 if airborne else 0)
+    hip_y = HIP + squat
+    draw_leg(c, CX - 3, back_foot, ground, back=True, hip_y=hip_y, knee_out=-squat // 2)
+    draw_arm(c, CX - 7, back_hand[0], back_hand[1] + bob + squat, back=True)
+    draw_torso(c, lean, bob + squat, squat)
+    draw_head(c, lean, bob + squat, lens_hot)
+    draw_leg(c, CX + 3, front_foot, ground, hip_y=hip_y, knee_out=squat // 2)
+    draw_arm(c, CX + 7, front_hand[0], front_hand[1] + bob + squat)
     if sword:
-        draw_sword(c, front_hand[0], front_hand[1] + bob, sword_ang)
+        draw_sword(c, front_hand[0], front_hand[1] + bob + squat, sword_ang)
     c.shade()
     c.outline()
     return c.image()
@@ -318,6 +324,56 @@ def attack_b(n=6):
     ]
 
 
+def crouch_idle(n=2):
+    """Low and coiled. The hurtbox shrinks with it, so this is a real defensive
+    option rather than a pose."""
+    return [
+        frame(CX + 11, CX - 10, (CX + 13, 70 + (i == 1)), (CX - 12, 68), 88,
+              squat=10, bob=(0, -1)[i])
+        for i in range(n)
+    ]
+
+
+def crouch_walk(n=6):
+    """Shuffling while crouched: short steps, no bob, weight kept low."""
+    out = []
+    for i in range(n):
+        p = (i / n) * math.tau
+        sw = math.sin(p) * 6
+        out.append(frame(
+            CX + sw, CX - sw,
+            (CX + 12 - sw * 0.3, 70), (CX - 11 + sw * 0.3, 69), 88,
+            squat=10, lean=1,
+        ))
+    return out
+
+
+def slide(n=3):
+    """Committed forward dive — the trailing leg extends, the blade drags."""
+    poses = [(14, 16, 100), (20, 20, 112), (16, 18, 104)]
+    return [
+        frame(CX + fwd, CX - 12, (CX + 4, 74), (CX - 14, 68), ang,
+              squat=sq, lean=5)
+        for fwd, sq, ang in poses
+    ]
+
+
+def smash(n=4):
+    """Jump then down: blade raised overhead, then driven straight into the
+    floor. The last frame is the impact, so it lands on the active tick."""
+    poses = [
+        (-90, CX + 4, 30, -14, True),
+        (-70, CX + 8, 26, -10, True),
+        (40, CX + 10, 54, -2, True),
+        (88, CX + 8, 74, 8, False),
+    ]
+    return [
+        frame(CX + 5, CX - 6, (hx, hy), (CX - 10, 56), ang,
+              squat=sq, airborne=air, lens_hot=(i >= 2))
+        for i, (ang, hx, hy, sq, air) in enumerate(poses)
+    ]
+
+
 def block(n=2):
     return [
         frame(CX + 5, CX - 7, (CX + 9, 46), (CX - 9, 54), -60, lean=-1, lens_hot=(i == 0))
@@ -343,8 +399,12 @@ save(attack_a(), "player-attack-a.png")
 save(attack_b(), "player-attack-b.png")
 save(block(), "player-block.png")
 save(hurt(), "player-hurt.png")
+save(crouch_idle(), "player-crouch.png")
+save(crouch_walk(), "player-crouch-walk.png")
+save(slide(), "player-slide.png")
+save(smash(), "player-smash.png")
 
-preview = idle() + walk() + attack_a() + attack_b() + block() + hurt()
+preview = idle() + walk() + attack_a() + attack_b() + block() + hurt() + crouch_idle() + crouch_walk() + slide() + smash()
 s = 4
 canvas = Image.new("RGBA", (W * len(preview) * s, H * s), (0x0B, 0x0E, 0x14, 255))
 for i, f in enumerate(preview):

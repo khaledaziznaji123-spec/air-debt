@@ -217,3 +217,51 @@ test("the attack box is the sword, not the whole body", () => {
       tuning.player.height * tuning.player.attackBoxBottom - 1,
   );
 });
+
+test("crouch-walking is possible but slower than standing", () => {
+  let standing = createInitialState(600);
+  let crouched = createInitialState(600);
+  for (let i = 0; i < 20; i++) {
+    standing = step(standing, Intent.Right);
+    crouched = step(crouched, Intent.Right | Intent.Crouch);
+  }
+  const standDist = standing.player.x - tuning.room.playerSpawnX;
+  const crouchDist = crouched.player.x - tuning.room.playerSpawnX;
+  assert.ok(crouchDist > 0, "crouching must not stop the player moving");
+  assert.ok(crouchDist < standDist, "but it must cost speed");
+  assert.equal(crouched.player.stance, "crouching");
+});
+
+test("crouching shrinks the hurtbox", () => {
+  const s = step(createInitialState(600), Intent.Crouch);
+  assert.equal(s.player.stance, "crouching");
+  assert.ok(tuning.movement.crouchHeightScale < 1);
+});
+
+test("the smash needs to be in the air — pressing down on the ground does not trigger it", () => {
+  const s = step(createInitialState(600), Intent.Crouch);
+  assert.equal(s.player.action.kind, null, "PRD FR-5.5: jump first, then down");
+});
+
+test("jump then down commits to a smash and lands with a wide impact", () => {
+  let s = step(createInitialState(600), Intent.Jump);
+  s = run(s, 4);
+  assert.equal(s.player.stance, "airborne");
+  s = step(s, Intent.Crouch);
+  assert.equal(s.player.action.kind, "smash");
+
+  // It drives straight down and cannot be steered.
+  const xAtCommit = s.player.x;
+  s = run(s, 3, Intent.Right);
+  assert.equal(s.player.x, xAtCommit, "a committed smash goes straight down");
+
+  // Fall to the floor, then the impact should be live and hit both sides.
+  for (let i = 0; i < 40 && s.player.stance === "airborne"; i++)
+    s = step(s, Intent.None);
+  const box = playerHitbox(s.player);
+  assert.ok(box, "the impact must be live on landing");
+  assert.ok(
+    box.left < s.player.x && box.right > s.player.x,
+    "it hits both sides",
+  );
+});

@@ -157,7 +157,7 @@ export class Renderer {
         `action   ${p.action.kind ?? "-"} (lockout ${p.action.lockout})`,
         `outcome  ${state.outcome}`,
         "",
-        `art      ${this.art.loaded.size}/12 loaded`,
+        `art      ${this.art.loaded.size}/16 loaded`,
         ...this.art.issues.map((w) => `  ! ${w}`),
       ].join("\n");
     }
@@ -307,9 +307,22 @@ export class Renderer {
   private playerFrame(state: SimState) {
     const p = state.player;
 
+    if (p.action.kind === "smash" && this.art.has("player.smash")) {
+      // Frames 0-2 are the dive, frame 3 the impact — so pin the last frame to
+      // the moment the hitbox is actually live rather than easing through it.
+      const grounded = p.stance !== "airborne";
+      return grounded
+        ? this.art.frame("player.smash", 3)
+        : this.art.frameOverProgress(
+            "player.smash",
+            Math.min(p.action.elapsed / 14, 0.74),
+          );
+    }
+
     if (p.action.kind === "attack") {
       // Alternating swings, so a chain does not replay the same animation.
-      const key = p.action.variant === 0 ? "player.attack.a" : "player.attack.b";
+      const key =
+        p.action.variant === 0 ? "player.attack.a" : "player.attack.b";
       if (this.art.has(key)) {
         const total =
           tuning.player.attackStartup +
@@ -326,7 +339,24 @@ export class Renderer {
       return this.art.frame("player.block", parrying ? 0 : 1);
     }
 
+    if (
+      (p.stance === "sliding" || p.stance === "backstepping") &&
+      this.art.has("player.slide")
+    ) {
+      const total = tuning.movement.slideDuration;
+      return this.art.frameOverProgress(
+        "player.slide",
+        1 - Math.min(p.dashTicks / total, 1),
+      );
+    }
+
     const moving = Math.abs(p.vx) > 0.1 && p.stance !== "airborne";
+
+    if (p.stance === "crouching") {
+      const key = moving ? "player.crouchWalk" : "player.crouch";
+      if (this.art.has(key)) return this.art.frameAtTick(key, state.tick);
+    }
+
     if (moving && this.art.has("player.run")) {
       return this.art.frameAtTick("player.run", state.tick);
     }
@@ -411,13 +441,11 @@ export class Renderer {
     if (p.action.kind === "block") {
       const parrying = p.action.elapsed < tuning.combat.parryWindow;
       const r = parrying ? 40 : 30;
-      this.playerGfx
-        .circle(x, y - h / 2, r)
-        .stroke({
-          width: parrying ? 4 : 2,
-          color: parrying ? COLOR.parryFlash : COLOR.playerDashing,
-          alpha: parrying ? 0.95 : 0.4,
-        });
+      this.playerGfx.circle(x, y - h / 2, r).stroke({
+        width: parrying ? 4 : 2,
+        color: parrying ? COLOR.parryFlash : COLOR.playerDashing,
+        alpha: parrying ? 0.95 : 0.4,
+      });
     }
   }
 

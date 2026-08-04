@@ -126,6 +126,17 @@ export function playerHitbox(p: Player): Box | null {
       BODY.height * BODY.attackBoxBottom,
     );
   }
+  if (p.action.kind === "smash") {
+    // Only live for a moment after touchdown, and it hits BOTH sides — the one
+    // attack that answers being surrounded (PRD FR-5.5).
+    if (p.action.elapsed >= BODY.smashActive) return null;
+    return {
+      left: p.x - BODY.smashRadius,
+      right: p.x + BODY.smashRadius,
+      top: p.y - BODY.height * 0.5,
+      bottom: p.y,
+    };
+  }
   if (p.action.kind === "stun") {
     const t = p.action.elapsed;
     if (t < BODY.stunStartup || t >= BODY.stunStartup + BODY.stunActive)
@@ -276,23 +287,50 @@ export function step(state: SimState, intents: Intents): SimState {
     };
   }
 
-  if (dashTicks === 0) {
+  // PRD FR-5.5 — jump, then press crouch to drive the blade into the floor.
+  // Only available in the air, which is what makes it a deliberate setup
+  // rather than a button to mash.
+  const airborne = y < FLOOR;
+  if (has(justPressed, Intent.Crouch) && airborne && action.kind === null) {
+    action = { kind: "smash", elapsed: 0, lockout: 999, variant: 0 };
+  }
+  const smashing = action.kind === "smash";
+
+  if (dashTicks === 0 && !smashing) {
     const left = has(intents, Intent.Left);
     const right = has(intents, Intent.Right);
-    vx = left === right ? 0 : right ? MOVE.runSpeed : -MOVE.runSpeed;
+    const speed =
+      has(intents, Intent.Crouch) && !airborne
+        ? MOVE.runSpeed * MOVE.crouchSpeedScale
+        : MOVE.runSpeed;
+    vx = left === right ? 0 : right ? speed : -speed;
+  } else if (smashing) {
+    vx = 0; // committed straight down
   }
 
   if (has(justPressed, Intent.Jump) && grounded && !isBusy(prev)) {
     vy = -MOVE.jumpImpulse;
   }
-  vy = Math.min(vy + MOVE.gravity, MOVE.maxFallSpeed);
+  vy = smashing
+    ? BODY.smashFallSpeed
+    : Math.min(vy + MOVE.gravity, MOVE.maxFallSpeed);
 
   x = x + vx;
   y = y + vy;
 
-  if (y >= FLOOR) {
+  const landed = y >= FLOOR;
+  if (landed) {
     y = FLOOR;
     vy = 0;
+    if (smashing && action.lockout > BODY.smashActive + BODY.smashRecovery) {
+      // Touchdown: convert the endless dive into the impact plus recovery.
+      action = {
+        kind: "smash",
+        elapsed: 0,
+        lockout: BODY.smashActive + BODY.smashRecovery,
+        variant: 0,
+      };
+    }
   }
   const half = BODY.width / 2;
   if (x < half) x = half;
