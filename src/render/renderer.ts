@@ -186,7 +186,7 @@ export class Renderer {
     for (const event of state.events) {
       switch (event.type) {
         case "parry":
-          this.particles.parry(event.x, event.y);
+          this.particles.parry(event.x, event.y, p.facing);
           break;
         case "enemyHit":
           this.particles.hit(event.x, event.y, p.facing);
@@ -474,19 +474,52 @@ export class Renderer {
       const t =
         (p.action.elapsed - tuning.player.attackStartup) /
         Math.max(tuning.player.attackActive, 1);
-      this.drawSlash(x, y - h * 0.55, p.facing, Math.min(Math.max(t, 0), 1));
+      this.drawSlash(
+        x,
+        y - h * 0.55,
+        p.facing,
+        Math.min(Math.max(t, 0), 1),
+        p.action.variant,
+      );
     }
 
-    // Block: the parry window and the punish tail must look different, because
-    // they are the whole skill (PRD FR-5.7 / FR-5.9).
+    // Block: the blade comes up between him and the threat. The parry window
+    // and the punish tail must look different, because telling them apart is
+    // the whole skill (PRD FR-5.7 / FR-5.9).
     if (p.action.kind === "block") {
       const parrying = p.action.elapsed < tuning.combat.parryWindow;
-      const r = parrying ? 40 : 30;
-      this.playerGfx.circle(x, y - h / 2, r).stroke({
-        width: parrying ? 4 : 2,
-        color: parrying ? COLOR.parryFlash : COLOR.playerDashing,
-        alpha: parrying ? 0.95 : 0.4,
-      });
+      const f = p.facing;
+      const guardX = x + f * 15;
+      const top = y - h * 0.95;
+      const bottom = y - h * 0.15;
+
+      // The blade itself, held vertically across the body.
+      this.playerGfx
+        .moveTo(guardX, top)
+        .lineTo(guardX - f * 3, bottom)
+        .stroke({
+          width: parrying ? 6 : 4,
+          color: parrying ? COLOR.parryFlash : COLOR.playerDashing,
+          alpha: parrying ? 1 : 0.55,
+        });
+      // Crossguard, so it reads as a sword rather than a bar.
+      this.playerGfx
+        .moveTo(guardX - f * 8, y - h * 0.42)
+        .lineTo(guardX + f * 7, y - h * 0.46)
+        .stroke({
+          width: 3,
+          color: parrying ? 0xf4d59a : COLOR.playerDashing,
+          alpha: parrying ? 0.95 : 0.4,
+        });
+
+      if (parrying) {
+        // A glint running down the edge only while the window is live, so the
+        // "now" is unmistakable at a glance.
+        this.playerGfx
+          .moveTo(guardX + f * 2, top + 4)
+          .lineTo(guardX - f * 1, bottom - 10)
+          .stroke({ width: 2, color: 0xffffff, alpha: 0.9 });
+      }
     }
   }
 
@@ -520,37 +553,59 @@ export class Renderer {
    * A crescent slash sweeping through its arc. Drawn as a stack of strokes at
    * decreasing radius so it reads as a blade trail rather than a shape — the
    * leading edge is bright and the tail falls away.
+   *
+   * The two swings get genuinely different arcs. The sprites already differ,
+   * but the slash is the loudest thing on screen, so if it does not change the
+   * whole attack reads as a repeat.
    */
   private drawSlash(
     x: number,
     y: number,
     facing: 1 | -1,
     progress: number,
+    variant: 0 | 1,
   ): void {
     const reach = tuning.player.attackReach;
-    // Sweep from high to low across the active frames.
-    const from = -1.15 + progress * 1.6;
-    const spread = 1.5;
 
-    for (let layer = 0; layer < 4; layer++) {
-      const r = reach * (1 - layer * 0.13);
-      const alpha = (0.85 - layer * 0.18) * (1 - progress * 0.35);
-      const width = 7 - layer * 1.4;
+    // A: an overhead chop — steep, tight, sweeping downward.
+    // B: a rising sweep — wide, flat, travelling up from low.
+    const shape =
+      variant === 0
+        ? {
+            from: -1.35 + progress * 1.75,
+            spread: 1.35,
+            radius: reach,
+            lift: 0,
+            core: 0xfff3c4,
+            mid: 0xf4d59a,
+            tail: COLOR.swing,
+            layers: 4,
+          }
+        : {
+            from: 1.15 - progress * 1.9,
+            spread: 1.7,
+            radius: reach * 1.12,
+            lift: 10,
+            core: 0xffffff,
+            mid: 0xd6e6f2,
+            tail: 0x8fb3c9,
+            layers: 5,
+          };
+
+    for (let layer = 0; layer < shape.layers; layer++) {
+      const r = shape.radius * (1 - layer * 0.12);
+      const alpha = (0.85 - layer * 0.15) * (1 - progress * 0.35);
+      const width = 7 - layer * 1.2;
       const colour =
-        layer === 0 ? 0xfff3c4 : layer === 1 ? 0xf4d59a : COLOR.swing;
+        layer === 0 ? shape.core : layer === 1 ? shape.mid : shape.tail;
 
-      const steps = 10;
-      let started = false;
+      const steps = 12;
       for (let i = 0; i <= steps; i++) {
-        const a = from + (spread * i) / steps;
+        const a = shape.from + (shape.spread * i) / steps;
         const px = x + Math.cos(a) * r * facing;
-        const py = y + Math.sin(a) * r;
-        if (!started) {
-          this.playerGfx.moveTo(px, py);
-          started = true;
-        } else {
-          this.playerGfx.lineTo(px, py);
-        }
+        const py = y + Math.sin(a) * r + shape.lift;
+        if (i === 0) this.playerGfx.moveTo(px, py);
+        else this.playerGfx.lineTo(px, py);
       }
       this.playerGfx.stroke({ width, color: colour, alpha });
     }

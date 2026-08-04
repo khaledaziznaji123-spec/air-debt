@@ -76,22 +76,46 @@ export class Particles {
   /**
    * A parry. Deliberately the loudest effect in the game — it is the single
    * best thing that can happen to a player, and it should feel like it.
+   *
+   * Directional rather than a ring: sparks spray back the way the blow came
+   * from, because a parry is a deflection. A circle reads as an aura, which is
+   * the wrong story about what just happened.
    */
-  parry(x: number, y: number) {
-    for (let i = 0; i < 26; i++) {
-      const a = (i / 26) * Math.PI * 2 + this.rand() * 0.3;
-      const speed = 4 + this.rand() * 7;
+  parry(x: number, y: number, facing: 1 | -1) {
+    // Main spray, fanned back toward the attacker.
+    for (let i = 0; i < 22; i++) {
+      const spread = (this.rand() - 0.5) * 1.5;
+      const a = spread - Math.PI / 8;
+      const speed = 5 + this.rand() * 9;
       this.push({
         x,
         y,
-        vx: Math.cos(a) * speed,
+        vx: Math.cos(a) * speed * facing,
         vy: Math.sin(a) * speed,
         life: 1,
-        maxLife: 0.3 + this.rand() * 0.3,
+        maxLife: 0.25 + this.rand() * 0.3,
         size: 1 + this.rand() * 2.5,
         color: i % 3 === 0 ? 0xffffff : 0x9beee7,
-        gravity: 8,
+        gravity: 14,
         streak: true,
+      });
+    }
+    // A few heavy shards thrown the other way, so the impact has weight rather
+    // than looking like it all went one direction politely.
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI + (this.rand() - 0.5) * 1.1;
+      const speed = 3 + this.rand() * 4;
+      this.push({
+        x,
+        y,
+        vx: Math.cos(a) * speed * facing,
+        vy: Math.sin(a) * speed - 2,
+        life: 1,
+        maxLife: 0.3 + this.rand() * 0.25,
+        size: 2 + this.rand() * 2,
+        color: 0xfff3c4,
+        gravity: 26,
+        streak: false,
       });
     }
   }
