@@ -37,7 +37,7 @@ export const SPRITE_MANIFEST: Record<SpriteKey, SpriteDef> = {
   "player.run": { path: "/art/player-run.png", width: 48, height: 96, frames: 6, ticksPerFrame: 6 },
   // Wider frames than idle/run: the slash arcs extend well past the body. The
   // character is still centred, so the anchor stays correct.
-  "player.attack": { path: "/art/player-attack.png", width: 80, height: 96, frames: 4 },
+  "player.attack": { path: "/art/player-attack.png", width: 88, height: 96, frames: 6 },
   "enemy.goblin.idle": { path: "/art/goblin-idle.png", width: 32, height: 48, frames: 1 },
   "enemy.goblin.windup": { path: "/art/goblin-windup.png", width: 32, height: 48, frames: 1 },
   "tile.floor": { path: "/art/tile-floor.png", width: 32, height: 32, frames: 1 },

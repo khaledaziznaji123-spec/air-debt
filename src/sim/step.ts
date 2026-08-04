@@ -222,7 +222,7 @@ export function step(state: SimState, intents: Intents): SimState {
     action = {
       kind: "attack",
       elapsed: 0,
-      lockout: BODY.attackStartup + BODY.attackActive + 8,
+      lockout: BODY.attackStartup + BODY.attackActive + BODY.attackRecovery,
     };
   } else if (has(justPressed, Intent.Stun) && !isBusy(prev)) {
     action = {

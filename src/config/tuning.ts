@@ -113,6 +113,8 @@ export const tuning = {
     attackStartup: s(0.1),
     /** How long the hitbox stays live. */
     attackActive: s(0.1),
+    /** Recovery after the swing. Long enough for the six-frame arc to read. */
+    attackRecovery: s(0.24),
     /** The stun attack: weak, slow, and the only guard-breaker (FR-5.6). */
     stunDamage: 8,
     stunStartup: s(0.3),

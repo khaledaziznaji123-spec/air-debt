@@ -262,7 +262,8 @@ export class Renderer {
     const p = state.player;
 
     if (p.action.kind === "attack" && this.art.has("player.attack")) {
-      const total = tuning.player.attackStartup + tuning.player.attackActive + 8;
+      const total =
+        tuning.player.attackStartup + tuning.player.attackActive + tuning.player.attackRecovery;
       return this.art.frameOverProgress("player.attack", p.action.elapsed / total);
     }
 
