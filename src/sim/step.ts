@@ -3696,6 +3696,33 @@ export function step(state: SimState, intents: Intents): SimState {
     if (thrownTo) events.push({ type: "thrownBack", x: prev.x, y: prev.y });
   }
 
+  /**
+   * Out of the world entirely, put back into it.
+   *
+   * A safety net rather than a fix, and it is worth being honest about which.
+   * A player reported falling through the floor of the water environment and I
+   * could not reproduce it — twenty-four fuzzed swims with smash-dives, slides
+   * and every shortcut open never once left the terrain. So the cause is still
+   * unknown, and this catches the SYMPTOM: below the bottom of the world there
+   * is nothing to stand on, nothing to swim in and no way back, so a run that
+   * gets there is over in the worst way — not killed, just gone.
+   *
+   * Rescued to the same ground a pit throws you onto, which is a hiccup rather
+   * than an ending. It costs nothing, because the player did not do anything
+   * wrong; a fall through the map is the game's mistake.
+   *
+   * If this ever fires in play, the event says so and the run's log will replay
+   * it exactly — which is a far better bug report than a memory of it happening.
+   */
+  const belowTheWorld = y > ROOM.floorY + 1200;
+  if (belowTheWorld) {
+    const rescue = safeGroundBefore(prev.x, prev.facing, BODY.width, BODY.height);
+    if (rescue) {
+      thrownTo = rescue;
+      events.push({ type: "fellThroughTheWorld", x: prev.x, y });
+    }
+  }
+
   // ---------------------------------------------------------------- outcome
   // PRD FR-1.3: air reaching zero is transformation, not death. Different in
   // kind, and checked first because it is the run's own clock running out.

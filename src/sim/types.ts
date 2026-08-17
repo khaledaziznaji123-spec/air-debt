@@ -717,6 +717,14 @@ export type SimEvent =
   | { type: "chuteLaunched"; x: number; y: number }
   /** A trap threw the player clear of it. `x`/`y` is where they were. */
   | { type: "thrownBack"; x: number; y: number }
+  /**
+   * The player left the world through the bottom and was put back.
+   *
+   * Should never happen. It exists because it did happen to somebody once and
+   * could not be reproduced afterwards — so if it fires, the run's input log
+   * replays it exactly and the cause stops being a mystery.
+   */
+  | { type: "fellThroughTheWorld"; x: number; y: number }
   /** A potion was spent. `kind` is which. */
   | { type: "potionUsed"; kind: string; x: number; y: number }
   /** Kicked off a wall. `dir` is the way the player was thrown. */

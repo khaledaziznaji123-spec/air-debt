@@ -1029,15 +1029,39 @@ function placeEncounters(seed: number): Enemy[] {
   // The sea is laid in short segments so its bed can slope, and "one per body"
   // read that as thirty-two separate oceans and put a shark in each. What the
   // player experiences is a distance, so that is what this measures.
+  //
+  // Five hundred rather than nine hundred, and skipped one time in ten rather
+  // than one in five. The environment was too quiet: a diver could cross most of
+  // it without meeting anything, which makes the breath meter the only pressure
+  // in the water and the breath meter is a clock rather than an enemy. The
+  // passage under the rock gets them too — it is the tightest water in the game
+  // and the least comfortable place to meet one, which is exactly the argument
+  // for it being there.
   {
-    const deepEnough = terrain.water.filter((w) => w.floor - w.surface > 150);
+    // SORTED, which is load-bearing rather than tidy. The spacing below walks
+    // the list keeping the last position it used, so it only means anything if
+    // the list ascends — and `terrain.water` does not. The sea is laid first,
+    // across the whole environment, and the flooded passage is laid afterwards
+    // into the middle of it. So by the time the walk reached the passage,
+    // `lastAt` was already past the far end of the sea, every segment came out
+    // as "too close to the last one", and the tightest water in the game had no
+    // sharks in it at all.
+    const deepEnough = terrain.water
+      // Deep enough to swim, and INSIDE THE DUNGEON. There is water past the
+      // end of the world — the tutorial hall has a pool in it — and sorting the
+      // list put that pool last, so the first thing the fixed spacing did was
+      // drop a shark into the room where nothing is supposed to be able to hurt
+      // anybody. `monstersAllowed` guards themes rather than the world's edge.
+      .filter((w) => w.floor - w.surface > 150 && w.x1 < builtEnd)
+      .slice()
+      .sort((a, b) => a.x0 - b.x0);
     let lastAt = -Infinity;
     for (const w of deepEnough) {
       const at = (w.x0 + w.x1) / 2;
-      if (at - lastAt < 900) continue;
+      if (at - lastAt < 500) continue;
       if (!monstersAllowed(at)) continue;
       lastAt = at;
-      if (rng.next() > 0.8) continue;
+      if (rng.next() > 0.9) continue;
       // Off the levers. This pass places by position rather than by anchor, so
       // it was a route by which something could end up sitting on the one piece
       // of ground FR-3 makes the win condition.
