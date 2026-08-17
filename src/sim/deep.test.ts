@@ -1188,6 +1188,87 @@ test("nothing can shoot up through the fire shortcut", () => {
   );
 });
 
+test("under the surface is swimming, even with both feet on the bed", () => {
+  // Reported from play: "it actually makes you walk under the water if there is
+  // floor instead of always swimming." It did. The stance asked `inWater &&
+  // !onGround`, on the reasoning that feet down is wading — which is right in a
+  // shin-deep pool and quite wrong three metres down, where it had the player
+  // striding along the seabed with the walk animation running and their head
+  // fully under.
+  const p = drownedPassage();
+  const base = createInitialState(60 * 60 * 20);
+  let s: SimState = {
+    ...base,
+    entered: true,
+    enemies: [],
+    player: { ...base.player, x: p.x0 + 400, y: FLOOR },
+  };
+  // Sink until the bed stops us.
+  for (let i = 0; i < 240; i++) s = step(s, Intent.Crouch);
+  assert.ok(
+    submerged(s.player.x, s.player.y, tuning.player.height),
+    "the diver should be under by now",
+  );
+  assert.equal(s.player.stance, "swimming", "it walked instead of swimming");
+
+  // And moving along the bottom is still a swim, not a stroll.
+  for (let i = 0; i < 20; i++) s = step(s, Intent.Right);
+  assert.equal(s.player.stance, "swimming");
+
+  // Wading survives: feet down, head OUT, in shallow water is walking.
+  const shallow: SimState = {
+    ...base,
+    entered: true,
+    enemies: [],
+    player: { ...base.player, x: shoreX() + 60, y: FLOOR },
+  };
+  const waded = step(shallow, Intent.Right);
+  if (!submerged(waded.player.x, waded.player.y, tuning.player.height)) {
+    assert.notEqual(
+      waded.player.stance,
+      "swimming",
+      "a head above water is not a swim",
+    );
+  }
+});
+
+test("neither the slide nor the backstep happens under water", () => {
+  // The other half of the same report: "press shift to go down and then you try
+  // to go up, it lags and you cannot get out."
+  //
+  // Both are ground moves — a slide skids on a surface, a backstep pushes off
+  // one — and the water has neither. Allowing them gave the water twenty-five
+  // ticks of movement it did not control: you pressed up, little happened, and
+  // the swimmer played a slide and then a BACKSTEP animation on the way to the
+  // top, because the swim block zeroes horizontal speed and the stance test
+  // reads a zero as travelling backwards.
+  const p = drownedPassage();
+  const base = createInitialState(60 * 60 * 20);
+  let s: SimState = {
+    ...base,
+    entered: true,
+    enemies: [],
+    player: { ...base.player, x: p.x0 + 400, y: FLOOR },
+  };
+  for (let i = 0; i < 60; i++) s = step(s, Intent.Crouch);
+  assert.ok(submerged(s.player.x, s.player.y, tuning.player.height));
+
+  // Tapped, because both moves are edge-triggered.
+  s = step(s, Intent.None);
+  s = step(s, Intent.Slide | Intent.Right);
+  assert.equal(s.player.dashTicks, 0, "a dash started under water");
+  assert.equal(s.player.stance, "swimming");
+
+  // And rising immediately afterwards is not held up by anything.
+  const before = s.player.y;
+  for (let i = 0; i < 20; i++) s = step(s, Intent.Jump);
+  assert.ok(
+    s.player.y < before - 40,
+    `it rose only ${Math.round(before - s.player.y)} units in 20 ticks`,
+  );
+  assert.equal(s.player.stance, "swimming", "it was still mid-dash");
+});
+
 test("the rock cannot be swum over, only under", () => {
   // The requirement the passage exists to serve. The sea was skippable — open
   // water with a surface you could swim the whole length of, which made every

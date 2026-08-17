@@ -2107,8 +2107,29 @@ export function step(state: SimState, intents: Intents): SimState {
       facing = -1;
   }
 
+  /**
+   * Whether the head is under, decided BEFORE the dash so the dash can be
+   * refused.
+   *
+   * `submerged` rather than "is there water here": wading through a shallow pool
+   * with your head out is still walking and a slide through it is still a slide.
+   * What has to be stopped is the move happening when there is no ground under
+   * you and no air above you.
+   */
+  const headUnder = submerged(prev.x, prev.y, BODY.height);
+
   // Slide / backstep — context-sensitive (FR-5.2), and cancels a swing (FR-5.10).
-  if (has(justPressed, Intent.Slide) && dashTicks === 0) {
+  //
+  // NEITHER OF THEM UNDER WATER. Both are ground moves: a slide is a body
+  // skidding on a surface and a backstep is a push off one, and the water has
+  // no surface to do either against. Allowing them meant a tap of the slide key
+  // while diving handed the water twenty-five ticks of movement it did not
+  // control — you pressed up, nothing much happened, and the swimmer played a
+  // slide and then a BACKSTEP animation on the way to the top, because the swim
+  // block zeroes horizontal speed and the stance test reads a zero as
+  // travelling backwards. From the player's side that is the water lagging and
+  // refusing to let go of you, which is exactly what it was reported as.
+  if (has(justPressed, Intent.Slide) && dashTicks === 0 && !headUnder) {
     const moving = has(intents, Intent.Left) !== has(intents, Intent.Right);
     const attacking = action.kind === "attack";
     const wantsSlide = moving && !attacking;
@@ -2345,6 +2366,18 @@ export function step(state: SimState, intents: Intents): SimState {
     }
 
     const head = y - BODY.height * 0.86;
+    // Fires whenever the head is at the line and up is held, INCLUDING on
+    // consecutive frames.
+    //
+    // It was briefly restricted to the one frame you surface, to stop a swimmer
+    // pogoing at the waterline while holding up. That stopped the pogo and also
+    // stopped the thing the breach exists for: every shelf in the sea became
+    // unreachable from the water again, because getting onto one is a launch you
+    // line up and repeat until it lands. The cenote crossing test caught it
+    // within seconds — a bot that could no longer cross its own environment.
+    //
+    // So the repeat stays. If the bob at the surface ever needs solving it wants
+    // solving in the float branch below, not by taking the launch away.
     const breaching = wantsUpNow && head <= inWater.surface + 6;
     if (breaching) {
       // Out, rather than bobbing against the underside of the waterline.
@@ -2568,10 +2601,17 @@ export function step(state: SimState, intents: Intents): SimState {
       ? vx * facing > 0
         ? "sliding"
         : "backstepping"
-      : // Swimming outranks airborne and loses to a dash. In the water and off
-        // the bed is swimming; in the water with your feet down is wading, and
-        // wading is walking with the gait taken off it.
-        inWater && !onGround
+      : // Swimming outranks airborne and loses to a dash.
+        //
+        // UNDER THE SURFACE IS ALWAYS SWIMMING, even with both feet planted on
+        // the bed. This used to be `inWater && !onGround`, on the reasoning that
+        // feet down is wading — which is right in a shin-deep pool and quite
+        // wrong three metres down, where it had the player striding along the
+        // seabed with the walk animation playing and their head fully under.
+        //
+        // Wading survives, because it is the same test read the other way: feet
+        // down and head OUT is not submerged, so it still comes out as walking.
+        inWater && (!onGround || submerged(x, y, BODY.height))
         ? "swimming"
         : climbing
           ? "climbing"
