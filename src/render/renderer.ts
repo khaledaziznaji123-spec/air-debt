@@ -554,7 +554,28 @@ export class Renderer {
     // than snapped: a camera that jumped ninety units every time the player
     // turned round would be worse than not having the item, and a run is full
     // of turning round.
-    const lamp = statsFor(state.loadout).sightAhead;
+    /**
+     * The camera lead is CAPPED, while the light itself is not.
+     *
+     * The lantern was moving two things at once: it lengthened the cone, and it
+     * pushed the camera the same distance forward. At three levels that is seven
+     * hundred and twenty units of push against a player who sits five hundred and
+     * thirty-eight from the edge, so the view arrived somewhere the player was
+     * not — reported as "the game focuses on the light and you cannot see the
+     * character", which is exactly what it did.
+     *
+     * The two were always redundant. What this game limits vision with is the
+     * gloom, and what the lantern buys is a cone that cuts through it — that is
+     * the item, and it still grows at full rate with every level. The camera
+     * only ever needed to lean far enough that the lit ground is on screen, and
+     * past that it was taking the player off it.
+     *
+     * So: the cone keeps its whole reach, the lean stops at a comfortable
+     * distance, and the upgrade is felt as more ground lit rather than as being
+     * shoved out of frame.
+     */
+    const LEAD_CAP = 200;
+    const lamp = Math.min(statsFor(state.loadout).sightAhead, LEAD_CAP);
     this.lampLead +=
       (lamp * p.facing - this.lampLead) * Math.min(1, this.frameDt * 3.2);
     let target = x - VIEW_W * 0.42 + this.lampLead;
@@ -576,7 +597,10 @@ export class Renderer {
      * means the lamp does as much as it can without ever costing you sight of
      * yourself.
      */
-    const MARGIN = 190;
+    // A backstop rather than the mechanism. With the lead capped above, nothing
+    // should reach this — it is here so that a future item, or a tuning change
+    // somebody makes at midnight, cannot put the player off the screen again.
+    const MARGIN = 260;
     const screenX = x - target;
     if (screenX < MARGIN) target = x - MARGIN;
     if (screenX > VIEW_W - MARGIN) target = x - (VIEW_W - MARGIN);
