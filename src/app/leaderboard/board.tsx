@@ -115,10 +115,10 @@ export default function Board({
           ← Home
         </Link>
         <Link
-          href="/play"
+          href="/play?ranked=1"
           className="rounded-full border border-lens/40 px-4 py-1.5 text-xs font-semibold tracking-[0.16em] text-lens uppercase transition-colors hover:border-lens hover:bg-lens/10"
         >
-          Go get on it →
+          Play ranked →
         </Link>
       </div>
 
@@ -126,9 +126,17 @@ export default function Board({
         <h1 className="text-2xl font-semibold tracking-tight text-[#e7ecf2]">
           Leaderboards
         </h1>
-        <p className="mt-1 text-sm text-[#6b7a89]">
+        <p className="mt-1 text-sm leading-relaxed text-[#6b7a89]">
           Every score here was re-played on the server from the keys that were
           pressed. There is no way to post one without playing it.
+        </p>
+        {/* Said on the board rather than buried in the mode, because the first
+            question anybody asks about a leaderboard is what it is measuring. */}
+        <p className="mt-3 rounded-lg border border-[#1c2531] bg-[#10151d] p-3 text-sm leading-relaxed text-[#8a94a6]">
+          Ranked runs only. Everyone plays on every weapon and every piece of
+          gear at full tier, with all shortcuts open — so a time or a haul is how
+          well it was played, not how long the account has been grinding. Your
+          potions and your look are your own.
         </p>
       </div>
 

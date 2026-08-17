@@ -119,9 +119,13 @@ export type OpenRun = {
   air: number;
   /** Decided by the server from a column, not by this browser. */
   admin: boolean;
+  ranked: boolean;
+  /** What to play on. For a ranked run this is not what the account owns. */
+  loadout: { levels: Record<string, number>; skin: string | null; pet: string | null };
+  openShortcuts: string[];
 };
 
-export async function openRun(): Promise<OpenRun | null> {
+export async function openRun(ranked = false): Promise<OpenRun | null> {
   const jwt = await token();
   if (!jwt) return null;
   const r = await fetch("/api/runs", {
@@ -130,7 +134,7 @@ export async function openRun(): Promise<OpenRun | null> {
       "content-type": "application/json",
       authorization: `Bearer ${jwt}`,
     },
-    body: JSON.stringify({ action: "start" }),
+    body: JSON.stringify({ action: "start", ranked }),
   });
   if (!r.ok) return null;
   const body = (await r.json()) as Partial<OpenRun> & { error?: string };
@@ -141,6 +145,9 @@ export async function openRun(): Promise<OpenRun | null> {
     seed: body.seed,
     air: Number(body.air),
     admin: Boolean(body.admin),
+    ranked: Boolean(body.ranked),
+    loadout: body.loadout ?? { levels: {}, skin: null, pet: null },
+    openShortcuts: Array.isArray(body.openShortcuts) ? body.openShortcuts : [],
   };
 }
 

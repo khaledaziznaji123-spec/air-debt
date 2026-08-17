@@ -24,6 +24,7 @@ export default async function PlayPage({
       <Game
         openShop={params.shop !== undefined}
         tutorial={params.tutorial !== undefined}
+        ranked={params.ranked !== undefined}
       />
     </SignedIn>
   );

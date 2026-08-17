@@ -41,7 +41,13 @@ export async function POST(request: Request) {
   try {
     switch (body.action) {
       case "start":
-        return NextResponse.json(await start(userId));
+        // `ranked` is the ONE thing the caller may ask for here, and asking is
+        // all it is: the server decides what a ranked run is made of — maxed
+        // gear, every shortcut open — and writes that onto the row before a tick
+        // is played. The request cannot name a loadout or a seed.
+        return NextResponse.json(
+          await start(userId, { ranked: body.ranked === true }),
+        );
       case "submit": {
         const result = await submit(
           userId,

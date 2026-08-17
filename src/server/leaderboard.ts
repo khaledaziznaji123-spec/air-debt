@@ -4,7 +4,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { replay, type InputRecord } from "../sim/index.ts";
 import { BOARDS, scoreOf, type Board } from "../sim/score.ts";
 import { tuning } from "../config/tuning.ts";
-import { levelOf, type Loadout } from "../config/shop.ts";
+import { levelOf, rankedLoadout, type Loadout } from "../config/shop.ts";
+import { allShortcutIds } from "../config/dungeon.ts";
 import { credit, load, type StoredProgress } from "./progress.ts";
 import { checkName } from "../config/names.ts";
 
@@ -77,6 +78,16 @@ export type StartedRun = {
   seed: number;
   air: number;
   /**
+   * Played on maxed gear with every shortcut open, and the only kind of run that
+   * ranks. Decided here and handed to the client, never asked of it — a browser
+   * that could set this would be a browser asking for top-tier equipment with a
+   * real score attached.
+   */
+  ranked: boolean;
+  /** What to play it on. For a ranked run this is not what the account owns. */
+  loadout: Loadout;
+  openShortcuts: string[];
+  /**
    * Whether this run is invincible, decided HERE and told to the client rather
    * than asked of it.
    *
@@ -97,13 +108,24 @@ export type StartedRun = {
  * server, outside the reducer, and the determinism rule (ARCH AD-1) is about
  * what happens once a run is under way.
  */
-export async function start(userId: string): Promise<StartedRun> {
+export async function start(
+  userId: string,
+  options: { ranked?: boolean } = {},
+): Promise<StartedRun> {
   const progress = await load(userId);
+  const ranked = options.ranked ?? false;
+  // Ranked plays on equipment nobody earned: every weapon and every piece of
+  // gear at its top tier. Potions and cosmetics are left exactly as the account
+  // has them — see `rankedLoadout` for why.
+  const owned = loadoutOf(progress);
+  const loadout = ranked ? rankedLoadout(owned) : owned;
+  const openShortcuts = ranked ? allShortcutIds() : progress.levered;
+
   // The same sum the client makes, from the same numbers. It has to be, or an
-  // honest run replays against a tank it never had and is rejected.
+  // honest run replays against a tank it never had and is rejected. On a ranked
+  // run that is the full tank, because the tank is gear.
   const air = Math.min(
-    tuning.air.base +
-      levelOf(loadoutOf(progress), "gear.tank") * tuning.air.perUpgrade,
+    tuning.air.base + levelOf(loadout, "gear.tank") * tuning.air.perUpgrade,
     tuning.air.max,
   );
   // A 32-bit seed, which is what `deriveSeed` expects to be handed.
@@ -119,8 +141,9 @@ export async function start(userId: string): Promise<StartedRun> {
       // starting and finishing must not change what the run is judged against —
       // and more to the point, the replay would stop matching and every honest
       // run that shopped mid-session would be rejected as a forgery.
-      loadout: loadoutOf(progress),
-      levered: progress.levered,
+      loadout,
+      levered: openShortcuts,
+      ranked,
       // Frozen with everything else, for the same reason: the replay has to run
       // under the same rules the player did, and a request cannot be allowed to
       // choose them. "This run was invincible" is exactly the sentence a cheat
@@ -131,7 +154,15 @@ export async function start(userId: string): Promise<StartedRun> {
     .single();
 
   if (error) throw new Error(error.message);
-  return { runId: data.id as string, seed, air, admin: progress.admin };
+  return {
+    runId: data.id as string,
+    seed,
+    air,
+    admin: progress.admin,
+    ranked,
+    loadout,
+    openShortcuts,
+  };
 }
 
 export type Submission =
@@ -165,7 +196,7 @@ export async function submit(
   const sb = service();
   const { data, error } = await sb
     .from("runs")
-    .select("user_id, seed, air, loadout, levered, admin, submitted_at")
+    .select("user_id, seed, air, loadout, levered, admin, ranked, submitted_at")
     .eq("id", runId)
     .maybeSingle();
 
@@ -212,10 +243,19 @@ export async function submit(
     god: Boolean(data.admin),
   });
 
-  const scores = BOARDS.map((board) => ({
-    board,
-    value: scoreOf(finished, board),
-  })).filter((s): s is { board: Board; value: number } => s.value !== null);
+  // ONLY A RANKED RUN CARRIES A SCORE.
+  //
+  // A Story run still records what it did and still gets its loot credited — it
+  // simply does not rank, because it was played on whatever that account had
+  // managed to buy. A starting-gear run and a maxed one on the same board is a
+  // board measuring equipment, which is the thing ranked exists to stop
+  // measuring.
+  const scores = !data.ranked
+    ? []
+    : BOARDS.map((board) => ({
+        board,
+        value: scoreOf(finished, board),
+      })).filter((s): s is { board: Board; value: number } => s.value !== null);
 
   // Credited from the replay, before anything is written to the board — a run
   // that pays and then fails to record a score is a bad day; a score recorded
@@ -319,6 +359,9 @@ export async function top(
     .select("user_id, name, admin, " + column + ", submitted_at")
     .not("submitted_at", "is", null)
     .not(column, "is", null)
+    // Ranked only. Everything on a board was played on the same equipment with
+    // the same shortcuts open, so a time or a haul is how well it was played.
+    .eq("ranked", true)
     // Higher is better on both boards — that is what `scoreOf` guarantees, and
     // it is why this sort does not have to know which board it is.
     .order(column, { ascending: false })

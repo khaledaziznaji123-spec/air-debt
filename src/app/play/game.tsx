@@ -11,6 +11,7 @@
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   createInitialState,
@@ -103,8 +104,19 @@ const REVIVE_COST = 2;
 export default function Game({
   openShop = false,
   tutorial = false,
+  ranked = false,
 }: {
   openShop?: boolean;
+  /**
+   * A ranked run: maxed weapons and gear, every shortcut open, and the only
+   * kind of run that appears on a leaderboard.
+   *
+   * Arrives as `/play?ranked=1` from the board. The flag only ASKS — what a
+   * ranked run is made of is decided server-side and frozen onto the row before
+   * a tick is played, because a browser that could name its own loadout would
+   * be naming its own score.
+   */
+  ranked?: boolean;
   /**
    * Run the tutorial hall instead of the dungeon. Arrives as `/play?tutorial=1`
    * from the home screen, resolved server-side for the same reason `openShop`
@@ -136,6 +148,7 @@ export default function Game({
   useEffect(() => {
     adminRef.current = admin;
   }, [admin]);
+  const router = useRouter();
   const [runKey, setRunKey] = useState(0);
   /**
    * What the server said this run starts from, or null if it could not be
@@ -157,6 +170,21 @@ export default function Game({
    * whole way down.
    */
   const [practice, setPractice] = useState(false);
+  /** A ranked run has ended and the board is where the player is going. */
+  const [backToBoard, setBackToBoard] = useState(false);
+  /**
+   * Back to the board after a ranked run.
+   *
+   * Delayed by a beat rather than immediate, because the score is submitted as
+   * the run ends and the board is read on arrival — navigate on the same frame
+   * and the player lands on a page that does not have their run on it yet, which
+   * looks exactly like the run not counting.
+   */
+  useEffect(() => {
+    if (!backToBoard) return;
+    const t = setTimeout(() => router.push("/leaderboard"), 1400);
+    return () => clearTimeout(t);
+  }, [backToBoard, router]);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [heldIntents, setHeldIntents] = useState(0);
   /**
@@ -393,14 +421,18 @@ export default function Game({
     const opened = runRef.current;
     let state = createInitialState(opened?.air ?? startingAir(), {
       seed: opened?.seed,
-      openShortcuts: leveredRef.current,
+      // The server's list where there is one. A ranked run has every shortcut
+      // open and did not earn any of them, so this cannot come from the account.
+      openShortcuts: opened?.openShortcuts ?? leveredRef.current,
       // The SERVER's verdict where there is one. Admin is a column now rather
       // than a browser setting, because an invincible run can rank — so the run
       // being played has to match the run that will be replayed, or an honest
       // admin run gets scored as the death it never had. The local toggle still
       // drives a practice run that nothing is riding on.
       god: opened ? opened.admin : adminRef.current,
-      loadout: loadoutRef.current,
+      // Likewise: ranked hands out equipment the account does not own, and the
+      // replay that scores the run is run against exactly this.
+      loadout: (opened?.loadout as typeof loadoutRef.current) ?? loadoutRef.current,
       tutorial,
     });
     let previous = state;
@@ -574,6 +606,11 @@ export default function Game({
           // this teaches what the controls were FOR, which is the one thing a
           // room full of gates cannot demonstrate on its own.
           if (tutorial && banked) setShopOpen(true);
+          // A ranked run came FROM the board and goes back to it. Dropping the
+          // player into the lobby instead leaves them looking at a Play button
+          // wondering where their time went — the score is the point of the
+          // mode, so the score is what they should be looking at.
+          if (ranked) setBackToBoard(true);
 
           // Hand in the log. Fire and forget on purpose: the run is over, the
           // loot is already banked by the code above, and a leaderboard that
@@ -626,7 +663,7 @@ export default function Game({
     // be torn down and rebuilt — but leaving it out would be a lie about what
     // the effect reads, and the next person to make it a piece of state would
     // find out the hard way.
-  }, [runKey, tutorial]);
+  }, [runKey, tutorial, ranked]);
 
   const startRun = async () => {
     setLastRun(null);
@@ -635,7 +672,7 @@ export default function Game({
     // whole point of the server issuing it (FR-15.1) is that the client cannot
     // pick a dungeon it has already mapped. A failure here is not fatal — the
     // run goes ahead on the default seed and scores nothing.
-    runRef.current = tutorial ? null : await openRun();
+    runRef.current = tutorial ? null : await openRun(ranked);
     // Everything still starts. What changes is whether it can pay: a run the
     // server did not open cannot be replayed, and a run that cannot be replayed
     // cannot be believed. Refusing to let anyone play while the connection is
@@ -681,6 +718,11 @@ export default function Game({
             its verb — and somebody beaten by the wall jump is exactly the
             player least likely to go looking for a door. The button costs
             nothing and it is the difference between a hard lesson and a trap. */}
+        {ranked && (
+          <span className="rounded-full border border-lens/40 bg-lens/10 px-4 py-1.5 text-xs font-semibold tracking-[0.16em] text-lens uppercase">
+            Ranked — full gear, all shortcuts
+          </span>
+        )}
         {practice && !tutorial && (
           <span className="rounded-full border border-brass/40 bg-brass/10 px-4 py-1.5 text-xs font-semibold tracking-[0.16em] text-brass uppercase">
             Practice — nothing banks

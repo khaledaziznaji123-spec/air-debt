@@ -852,3 +852,37 @@ export function pay(price: Price, purse: Purse): Purse | null {
   );
   return { gems, gold: purse.gold - price.gold - check.goldForGems };
 }
+
+/**
+ * The loadout a RANKED run is played on.
+ *
+ * Every weapon and every piece of gear at its top tier, for everybody. A board
+ * where the winner is whoever has played longest is a board that measures hours
+ * rather than skill, and the shop is a progression system for Story — bringing
+ * it into a competitive mode makes the competition about the shop.
+ *
+ * Three things are deliberately NOT levelled up:
+ *
+ *   POTIONS stay exactly as the player owns them. They are consumables bought
+ *   per run rather than a tier you climb, and handing everybody a full belt
+ *   would flatten the one in-run decision ranked still has — when to spend.
+ *
+ *   COSMETICS stay as they are, which means you play ranked wearing what you
+ *   already own and nothing else. A mode that hands out the skins would make
+ *   the cosmetics shelf pointless, and they change nothing in the simulation
+ *   anyway — a skin is drawn by the view and a pet does not exist to it.
+ *
+ *   Anything with no tiers is left alone by definition.
+ *
+ * Built from `SHOP` rather than written down, so an item added tomorrow is
+ * included the day it is added rather than the day somebody remembers this.
+ */
+export function rankedLoadout(owned: Loadout): Loadout {
+  const levels: Record<string, number> = { ...owned.levels };
+  for (const item of SHOP) {
+    if (!item.id.startsWith("weapon.") && !item.id.startsWith("gear.")) continue;
+    // `tiers` absent means a single-purchase item: owning it is level one.
+    levels[item.id] = item.tiers ?? 1;
+  }
+  return { levels, skin: owned.skin, pet: owned.pet };
+}

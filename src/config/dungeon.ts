@@ -339,3 +339,17 @@ export function checkDungeonLayout() {
     leversPastTheGround: shortcuts.every((s) => s.leverX >= s.toX),
   };
 }
+
+/**
+ * Every shortcut, open.
+ *
+ * For ranked runs. FR-3.3 makes a levered shortcut permanent and FR-3.5 makes an
+ * unlevered one inert however the player came to know it was there — both of
+ * which are about Story, where finding the lever IS the progress. A competitive
+ * mode cannot ask that: the boards would rank whoever had already done the
+ * unlocking, which is the same problem as ranking whoever had already done the
+ * shopping.
+ */
+export function allShortcutIds(): string[] {
+  return shortcuts.map((s) => s.id);
+}
