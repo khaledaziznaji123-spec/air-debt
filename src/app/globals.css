@@ -1,26 +1,178 @@
 @import "tailwindcss";
 
+/*
+ * The dungeon's palette, lifted straight out of the renderer so the shell and
+ * the game are lit by the same lamp. A menu in default greys in front of a game
+ * this dark reads as a different piece of software.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b0e14;
+  --foreground: #dfe6ef;
+  /* The oxygen glow — the brightest thing on the player sprite, and the only
+     colour in this game that means "alive". Nothing else may use it. */
+  --lens: #5fd9cf;
+  --brass: #f0b73f;
+  --rock: #232c39;
+  --rock-edge: #46586e;
+  /* Two more, for the menu only. The dungeon has no red and no green in it —
+     which is exactly why the home screen does: four modes that all look alike
+     is a list, four that do not is a choice. */
+  --punch: #f2678f;
+  --sprout: #7fd06a;
+
+  /*
+   * The shop, and only the shop.
+   *
+   * Warm where everything else is cold, and light where everything else is
+   * dark. The dungeon is lit at "you are running out of air" and the menu is
+   * lit at "press this" — the shop is neither. It is the one room in the game
+   * nothing is chasing you in, so it is the one room that gets to be cosy:
+   * cream shelves, warm brown ink, honey and coral for anything that matters.
+   *
+   * The pixel icons all carry their own dark outlines, which is why they still
+   * read on a cream card rather than dissolving into it.
+   */
+  --shop-bg: #2c1f26;
+  --shop-back: #3a2a30;
+  --shop-card: #f7e9d8;
+  --shop-card-2: #ecd8c1;
+  --shop-line: #c9a684;
+  --shop-ink: #4d382f;
+  --shop-ink-soft: #86685a;
+  --shop-honey: #f0a93c;
+  --shop-coral: #ef7d6a;
+  --shop-mint: #63b98f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-lens: var(--lens);
+  --color-brass: var(--brass);
+  --color-rock: var(--rock);
+  --color-rock-edge: var(--rock-edge);
+  --color-punch: var(--punch);
+  --color-sprout: var(--sprout);
+  --color-shop-bg: var(--shop-bg);
+  --color-shop-back: var(--shop-back);
+  --color-shop-card: var(--shop-card);
+  --color-shop-card-2: var(--shop-card-2);
+  --color-shop-line: var(--shop-line);
+  --color-shop-ink: var(--shop-ink);
+  --color-shop-ink-soft: var(--shop-ink-soft);
+  --color-shop-honey: var(--shop-honey);
+  --color-shop-coral: var(--shop-coral);
+  --color-shop-mint: var(--shop-mint);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/*
+ * The menu's looping run.
+ *
+ * All of it is CSS. A canvas would mean booting a second renderer on the home
+ * page for a decoration, and a GIF would mean shipping the frames twice.
+ *
+ * The three speeds are the whole illusion. The runner never moves; the floor
+ * goes by fast and the far wall goes by slow, and the difference between those
+ * two rates is the only reason it reads as travel rather than as wallpaper.
+ * Every layer scrolls by exactly one tile width, so the loop has no seam.
+ */
+@keyframes ad-scroll-back {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -1280px;
+  }
+}
+@keyframes ad-scroll-front {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -1280px;
+  }
+}
+/* Eight frames, held three ticks each at 60Hz — the same cadence the game runs
+   the sprint at, so the menu and the game agree about how fast he moves. */
+@keyframes ad-run {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -768px;
+  }
+}
+/* A slow lean, because a title that sits perfectly still looks like a heading
+   and this one is meant to look like a sign someone nailed up. */
+@keyframes ad-sway {
+  0%,
+  100% {
+    transform: rotate(-1.2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(1.2deg) translateY(-4px);
+  }
+}
+@keyframes ad-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.ad-back,
+.ad-front {
+  image-rendering: pixelated;
+  background-repeat: repeat-x;
+  background-size: 1280px 720px;
+  background-position-y: bottom;
+}
+.ad-back {
+  background-image: url("/art/menu-back.png");
+  /* The tile is 720 tall and pinned to the bottom, so on anything taller there
+     is bare page above it — which drew a hard horizontal line straight across
+     the title. Filling with the tile's own top row makes the join invisible. */
+  background-color: #3a4759;
+  animation: ad-scroll-back 9s linear infinite;
+}
+.ad-front {
+  background-image: url("/art/menu-front.png");
+  animation: ad-scroll-front 3.2s linear infinite;
+}
+.ad-runner {
+  image-rendering: pixelated;
+  background-image: url("/art/player-run.png");
+  background-size: 768px 192px;
+  width: 96px;
+  height: 192px;
+  animation: ad-run 0.4s steps(8) infinite;
+}
+.ad-sway {
+  animation: ad-sway 6s ease-in-out infinite;
+}
+.ad-bob {
+  animation: ad-bob 2.4s ease-in-out infinite;
+}
+
+/* Someone who has asked not to be moved gets a still dungeon and a still sign.
+   The page still says everything it needs to. */
+@media (prefers-reduced-motion: reduce) {
+  .ad-back,
+  .ad-front,
+  .ad-runner,
+  .ad-sway,
+  .ad-bob {
+    animation: none;
+  }
 }

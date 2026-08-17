@@ -3,207 +3,372 @@
 /**
  * The between-run shop.
  *
- * PRD Q42 settled that this is a MAJOR surface, not a menu: at a 30-second base
- * tank a session is roughly eight runs, so this screen is proportionally about
- * half the game. It is also where the run's second half is really decided —
- * whether Maya can drink Restoration at 1 HP was chosen here, before she
- * pressed start.
+ * PRD Q42 settled that this is a MAJOR surface rather than a menu: at a
+ * 30-second base tank a session is roughly eight runs, so this screen is
+ * proportionally about half the game. It is also where the run's second half is
+ * really decided — whether the player can drink Restoration at 1 HP was chosen
+ * here, before they pressed start.
  *
- * Nothing is purchasable yet. Balances are server-owned (ARCH AD-10, FR-15.8)
- * and there is no persistence, so this shows the shape of the economy and its
- * rules rather than pretending to sell anything. Saying so is better than a
- * button that silently does nothing.
+ * What is on the shelves, what it costs, and the rule about gold all live in
+ * `src/config/shop.ts`. This file is only how you look at it.
+ *
+ * Two rules about how it looks:
+ *
+ * GRADES ARE NEVER NUMBERS. Internally a price is an array indexed by grade,
+ * and that is the wrong thing to put on screen — "12·g1" is a database row. A
+ * player holds a green emerald and a violet amethyst, and the shop shows the
+ * stone: its own cut, its own colour, its own name. The number is how many.
+ *
+ * IT IS WARM, AND IT IS THE ONLY WARM ROOM. The dungeon is cold and dark
+ * because you are running out of air in it; the menu is bright because it wants
+ * to be pressed. The shop is neither — it is the one place in the game nothing
+ * is chasing you, so it gets cream shelves and brown ink and honey for anything
+ * that matters. The pixel icons all carry their own dark outlines, which is the
+ * reason they still read against cream instead of dissolving into it.
  */
 
+import { useState } from "react";
+import {
+  CATEGORIES,
+  SHOP,
+  afford,
+  priceOf,
+  type ShopCategory,
+  type ShopItem,
+  type Purse,
+} from "@/config/shop";
 import { tuning } from "@/config/tuning";
 
-type Item = {
-  name: string;
-  detail: string;
-  cost: { grade: number; count: number }[];
-  tag?: string;
-};
+const GEM_NAME = tuning.loot.gemNames;
+/** `prop-loot.png` is six 20px frames: five gems, then the coin. */
+const LOOT_FRAMES = tuning.loot.grades + 1;
+const COIN = tuning.loot.grades;
 
-const WEAPONS: Item[] = [
-  {
-    name: "Honed edge",
-    detail: "+6 sword damage",
-    cost: [{ grade: 1, count: 12 }],
-  },
-  {
-    name: "Longer guard",
-    detail: "+2 ticks of parry window",
-    cost: [{ grade: 1, count: 18 }],
-    tag: "forgiving",
-  },
-];
-
-const GEAR: Item[] = [
-  {
-    name: "Padded coat",
-    detail: "+20 max health",
-    cost: [{ grade: 1, count: 14 }],
-  },
-  {
-    name: "Second tank",
-    detail: `+${tuning.air.perUpgrade / 60}s of air`,
-    cost: [
-      { grade: 1, count: 20 },
-      { grade: 2, count: 6 },
-    ],
-    tag: "the master resource",
-  },
-];
-
-const POTIONS: Item[] = [
-  {
-    name: "Restoration",
-    detail: "Heals to full, once",
-    cost: [
-      { grade: 1, count: 4 },
-      { grade: 2, count: 1 },
-    ],
-  },
-  {
-    name: "Air",
-    detail: "+10s mid-run",
-    cost: [
-      { grade: 1, count: 6 },
-      { grade: 2, count: 2 },
-    ],
-  },
-  {
-    name: "Passage",
-    detail: "Skip to the next environment — forfeits its loot",
-    cost: [
-      { grade: 1, count: 5 },
-      { grade: 3, count: 1 },
-    ],
-  },
-];
-
-function Row({ item, gems }: { item: Item; gems: number }) {
-  const grade1 = item.cost.find((c) => c.grade === 1)?.count ?? 0;
-  const affordable = gems >= grade1 && item.cost.length === 1;
-  const needsHigher = item.cost.length > 1;
-
+/** One stone or coin from the loot sheet, at whatever size is asked for. */
+function Coin({ frame, size = 22 }: { frame: number; size?: number }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/5 py-2 last:border-0">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-[#e8edf5]">
-          {item.name}
-          {item.tag && (
-            <span className="ml-2 text-[10px] font-normal tracking-wide text-[#4ecdc4] uppercase">
-              {item.tag}
-            </span>
-          )}
-        </p>
-        <p className="truncate text-xs text-[#8a94a6]">{item.detail}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <div className="flex gap-2 font-mono text-xs">
-          {item.cost.map((c) => (
-            <span
-              key={c.grade}
-              className={
-                c.grade === 1 && gems >= c.count
-                  ? "text-[#4ecdc4]"
-                  : "text-[#8a94a6]"
-              }
-            >
-              {c.count}
-              <span className="opacity-60">×g{c.grade}</span>
-            </span>
-          ))}
-        </div>
-        <button
-          disabled
-          title={
-            needsHigher
-              ? "Needs higher-grade gems — only found deeper in"
-              : "Not purchasable yet: balances are server-owned and persistence is not built"
-          }
-          className={`cursor-not-allowed rounded px-3 py-1 text-xs font-semibold ${
-            affordable
-              ? "bg-[#4ecdc4]/20 text-[#4ecdc4]"
-              : "bg-white/5 text-[#8a94a6]"
-          }`}
-        >
-          {affordable ? "Afford" : needsHigher ? "Deeper" : "Short"}
-        </button>
-      </div>
-    </div>
+    <span
+      aria-hidden
+      className="inline-block shrink-0"
+      style={{
+        width: size,
+        height: size,
+        imageRendering: "pixelated",
+        backgroundImage: "url(/art/prop-loot.png)",
+        backgroundSize: `${size * LOOT_FRAMES}px ${size}px`,
+        backgroundPosition: `${-size * frame}px 0`,
+      }}
+    />
   );
 }
 
-function Section({
-  title,
-  items,
-  gems,
-}: {
-  title: string;
-  items: Item[];
-  gems: number;
-}) {
+/** The item's own picture, from `items.png`, indexed by its place in `SHOP`. */
+function ItemArt({ index, size = 64 }: { index: number; size?: number }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
-      <p className="mb-1 text-[11px] font-bold tracking-widest text-[#4ecdc4] uppercase">
-        {title}
-      </p>
-      {items.map((i) => (
-        <Row key={i.name} item={i} gems={gems} />
-      ))}
+    <span
+      aria-hidden
+      className="inline-block shrink-0 rounded-2xl border-2 border-shop-line/60 bg-shop-card-2"
+      style={{
+        width: size,
+        height: size,
+        imageRendering: "pixelated",
+        backgroundImage: "url(/art/items.png)",
+        backgroundSize: `${size * SHOP.length}px ${size}px`,
+        backgroundPosition: `${-size * index}px 0`,
+      }}
+    />
+  );
+}
+
+/** A stone and how many of it. Never a grade number. */
+function Cost({
+  frame,
+  need,
+  have,
+  label,
+}: {
+  frame: number;
+  need: number;
+  have: number;
+  label: string;
+}) {
+  const enough = have >= need;
+  return (
+    <span
+      title={`${need} ${label} — you have ${have}`}
+      className={`flex items-center gap-1.5 rounded-full border-2 px-2.5 py-1 ${
+        enough
+          ? "border-shop-line bg-shop-card-2"
+          : "border-shop-line/40 bg-shop-card-2/50"
+      }`}
+    >
+      <Coin frame={frame} size={20} />
+      {/* The icon carries the colour; the number is ink. A mint-green count on
+          a cream chip is unreadable, and a gold one is worse — the whole point
+          of putting the stone here is that the stone is what identifies it. */}
+      <span
+        className="font-mono text-sm font-black text-shop-ink"
+        style={{ opacity: enough ? 1 : 0.4 }}
+      >
+        {need}
+      </span>
+    </span>
+  );
+}
+
+function Card({
+  item,
+  index,
+  purse,
+  level,
+  beaten,
+  worn,
+  onBuy,
+  onWear,
+}: {
+  item: ShopItem;
+  index: number;
+  purse: Purse;
+  /** What has been beaten, which is what unlocks the one earned item. */
+  beaten: readonly string[];
+  /** How many of this one is already owned. */
+  level: number;
+  /** Whether THIS item is the one currently equipped in its slot. */
+  worn: boolean;
+  onBuy: () => void;
+  onWear: () => void;
+}) {
+  const tiers = item.tiers ?? 1;
+  const have = level > 0;
+  const maxed = level >= tiers;
+  // The price of the NEXT one, which climbs with every level already bought.
+  const cost = priceOf(item, level);
+  const check = afford(cost ?? item.price, purse);
+  // Earned, not bought. There is exactly one of these and it is never for sale
+  // at any price — what unlocks it is having beaten the thing it came off.
+  const locked = item.earned !== undefined && !beaten.includes(item.earned);
+  const canBuy =
+    item.live && !maxed && !locked && item.earned === undefined
+      ? cost !== null && check.affordable
+      : item.earned !== undefined && !locked && !have;
+  // Something you own but have not equipped gets a button that puts it on.
+  const equippable = Boolean(item.skin || item.pet);
+  const wearable = equippable && have && !worn;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-3xl border-2 border-b-[6px] border-shop-line bg-shop-card p-4">
+      <div className="flex items-center gap-4">
+        <ItemArt index={index} />
+
+        <div className="flex-1">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="font-mono text-lg font-black text-shop-ink">
+              {item.name}
+            </span>
+            {tiers > 1 && (
+              <span className="font-mono text-sm font-bold text-shop-mint">
+                {level}/{tiers}
+              </span>
+            )}
+            {tiers === 1 && have && (
+              <span className="rounded-full border-2 border-shop-mint bg-shop-mint/20 px-2 text-[10px] font-black tracking-widest text-[#1d5138] uppercase">
+                {worn ? "Equipped" : "Owned"}
+              </span>
+            )}
+            {locked && (
+              <span className="rounded-full border-2 border-shop-line bg-shop-card-2 px-2 text-[10px] font-black tracking-widest text-shop-ink-soft uppercase">
+                beat the one at the bottom
+              </span>
+            )}
+            {!item.live && (
+              <span className="rounded-full border-2 border-shop-honey/70 bg-shop-honey/15 px-2 text-[10px] font-black tracking-widest text-shop-ink-soft uppercase">
+                not wired up
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* What it costs, on the right, as stones rather than as grades. */}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {item.earned === undefined &&
+            (cost ?? item.price).gems.map((n, g) =>
+              n === 0 ? null : (
+                <Cost
+                  key={g}
+                  frame={g}
+                  need={n}
+                  have={purse.gems[g] ?? 0}
+                  label={GEM_NAME[g]}
+                />
+              ),
+            )}
+          {item.earned === undefined && (cost ?? item.price).gold > 0 && (
+            <Cost
+              frame={COIN}
+              need={(cost ?? item.price).gold}
+              have={purse.gold}
+              label="gold"
+            />
+          )}
+        </div>
+
+        <button
+          disabled={!canBuy && !wearable}
+          onClick={wearable ? onWear : canBuy ? onBuy : undefined}
+          title={
+            !item.live
+              ? "The shelf is priced; the system behind it is not built yet."
+              : maxed && !wearable
+                ? "Nothing more to fit."
+                : undefined
+          }
+          className={
+            canBuy || wearable
+              ? "w-28 shrink-0 rounded-2xl border-2 border-b-4 border-[#b9752f] bg-shop-honey px-3 py-2 text-sm font-black text-[#3d2408] transition-transform hover:-translate-y-0.5 active:translate-y-0.5 active:border-b-2"
+              : "w-28 shrink-0 cursor-not-allowed rounded-2xl border-2 border-b-4 border-shop-line/60 bg-shop-card-2/60 px-3 py-2 text-sm font-black text-shop-ink-soft/60"
+          }
+        >
+          {wearable
+            ? "Wear"
+            : maxed
+              ? tiers > 1
+                ? "Maxed"
+                : worn
+                  ? "Equipped"
+                  : "Owned"
+              : canBuy
+                ? have
+                  ? "Upgrade"
+                  : "Buy"
+                : item.live
+                  ? "Short"
+                  : "Soon"}
+        </button>
+      </div>
+
+      <p className="text-xs font-semibold text-shop-ink-soft">{item.blurb}</p>
+
+      {/* FR-13.2a made visible, and only to someone holding gold — told to an
+          empty purse it appears on every row of every shelf, and a warning that
+          is always on screen is not read. */}
+      {check.blockedByThreshold && purse.gold > 0 && (
+        <p className="text-[11px] font-bold text-shop-coral">
+          Gold cannot cover this one. Bring back more of the stone itself.
+        </p>
+      )}
+      {!check.blockedByThreshold && check.goldForGems > 0 && (
+        <p className="text-[11px] font-bold text-[#a9752c]">
+          + {check.goldForGems} gold to cover what you are short.
+        </p>
+      )}
     </div>
   );
 }
 
 export default function Shop({
-  gems,
   onClose,
+  purse,
+  levels,
+  beaten,
+  skin,
+  pet,
+  onBuy,
+  onWear,
 }: {
-  gems: number;
   onClose: () => void;
+  purse: Purse;
+  /** Item id to level owned. */
+  levels: Readonly<Record<string, number>>;
+  /** What has been beaten. The one earned item is locked until it is in here. */
+  beaten: readonly string[];
+  /** The armour currently worn, and the pet currently out. */
+  skin: string | null;
+  pet: string | null;
+  onBuy: (id: string) => void;
+  onWear: (id: string) => void;
 }) {
-  const threshold = Math.round(tuning.economy.goldShortfallThreshold * 100);
+  const [tab, setTab] = useState<ShopCategory>("gear");
 
   return (
-    <div className="absolute inset-0 flex flex-col gap-3 overflow-y-auto rounded-lg bg-[#0b0e14]/97 p-6">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-bold text-[#e8edf5]">Between runs</h2>
-        <p className="font-mono text-sm text-[#4ecdc4]">
-          {gems} <span className="text-[#8a94a6]">grade-1 gems</span>
-        </p>
-      </div>
+    <div className="absolute inset-0 flex flex-col gap-4 overflow-hidden rounded-lg bg-shop-bg p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          onClick={onClose}
+          className="rounded-full border-2 border-b-4 border-shop-line bg-shop-card px-5 py-2 text-xs font-black tracking-wider text-shop-ink uppercase transition-transform hover:-translate-y-0.5 active:translate-y-0.5 active:border-b-2"
+        >
+          Back
+        </button>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Section title="Weapons" items={WEAPONS} gems={gems} />
-        <Section title="Gear" items={GEAR} gems={gems} />
-        <Section title="Potions" items={POTIONS} gems={gems} />
-      </div>
-
-      <div className="rounded-lg border border-[#f4a259]/30 bg-[#f4a259]/5 p-3">
-        <p className="text-xs text-[#f4a259]">
-          <span className="font-bold">The {threshold}% rule.</span>{" "}
-          <span className="text-[#8a94a6]">
-            Gold can cover a shortfall only once you already hold {threshold}%
-            of the gems a purchase needs, counted separately for every grade.
-            Money never buys more than the last {100 - threshold}% of anything.
+        {/* The purse, always on screen. Deciding what to buy is the whole
+            activity here and it cannot be done from memory. */}
+        <div className="flex flex-wrap items-center gap-3 rounded-full border-2 border-shop-line bg-shop-card px-4 py-2">
+          {purse.gems.map((n, g) => (
+            <span
+              key={g}
+              title={GEM_NAME[g]}
+              className="flex items-center gap-1"
+              style={{ opacity: n > 0 ? 1 : 0.3 }}
+            >
+              <Coin frame={g} size={18} />
+              <span className="font-mono text-sm font-black text-shop-ink">
+                {n}
+              </span>
+            </span>
+          ))}
+          <span className="flex items-center gap-1" title="gold">
+            <Coin frame={COIN} size={18} />
+            <span className="font-mono text-sm font-black text-shop-ink">
+              {purse.gold}
+            </span>
           </span>
-        </p>
+        </div>
       </div>
 
-      <p className="text-xs text-[#8a94a6]">
-        Nothing is buyable yet — balances live on the server and persistence is
-        not built. Higher-grade gems only drop deeper in, which is why the
-        expensive items say <span className="text-[#e8edf5]">Deeper</span>.
+      {/* Four shelves, across the whole width. Equal columns, because they are
+          equal choices — a tab strip bunched at the left reads as a filter. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.key}
+            onClick={() => setTab(c.key)}
+            className={
+              tab === c.key
+                ? "rounded-2xl border-2 border-b-[6px] border-[#b9752f] bg-shop-honey px-4 py-3 text-sm font-black text-[#3d2408]"
+                : "rounded-2xl border-2 border-b-[6px] border-shop-line bg-shop-card px-4 py-3 text-sm font-black text-shop-ink-soft transition-transform hover:-translate-y-0.5"
+            }
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs font-semibold text-shop-card/70">
+        {CATEGORIES.find((c) => c.key === tab)?.hint}
       </p>
 
-      <button
-        onClick={onClose}
-        className="mt-auto self-start rounded bg-[#4ecdc4] px-5 py-2 font-semibold text-[#0b0e14] transition hover:brightness-110"
-      >
-        Back
-      </button>
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+        {SHOP.map((item, index) =>
+          item.category !== tab ? null : (
+            <Card
+              key={item.id}
+              item={item}
+              index={index}
+              purse={purse}
+              level={levels[item.id] ?? 0}
+              beaten={beaten}
+              worn={item.pet ? pet === item.id : skin === item.id}
+              onBuy={() => onBuy(item.id)}
+              onWear={() => onWear(item.id)}
+            />
+          ),
+        )}
+      </div>
+
+      <p className="text-[11px] text-shop-card/35">
+        Potions come back every run. Nothing here survives closing the tab —
+        balances are the server&apos;s to own (FR-15.8, ARCH AD-10) and there is
+        no server yet.
+      </p>
     </div>
   );
 }
