@@ -48,3 +48,9 @@ play-initial.png
 
 # TypeScript incremental build cache — a local artifact, not source.
 *.tsbuildinfo
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
