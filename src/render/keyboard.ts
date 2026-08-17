@@ -30,6 +30,16 @@ export const DEFAULT_BINDINGS: Bindings = {
   KeyK: Intent.Block,
   KeyL: Intent.Stun,
   KeyI: Intent.Bow,
+  KeyE: Intent.Interact,
+  // The two potions with a button. Numbers rather than letters: the letter keys
+  // around WASD are all spoken for, and a consumable you spend once a run is
+  // reached for deliberately rather than found by feel.
+  Digit1: Intent.Restoration,
+  Digit2: Intent.Breath,
+  Digit3: Intent.Haste,
+  Digit4: Intent.Venom,
+  Digit5: Intent.Milk,
+  Digit6: Intent.Shield,
 };
 
 /**

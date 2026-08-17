@@ -120,6 +120,64 @@ export class Particles {
     }
   }
 
+  /**
+   * The guard-breaker connecting. Deliberately not sparks: sparks are steel on
+   * steel, and this is a hilt in someone's ribs. Cold motes thrown out in a
+   * ring, hanging almost still, so it reads as a shock rather than a cut.
+   */
+  concussion(x: number, y: number, facing: 1 | -1) {
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2 + this.rand() * 0.3;
+      const speed = 3 + this.rand() * 5;
+      this.push({
+        x,
+        y,
+        // Biased along the blow, so the ring still says which way it came from.
+        vx: Math.cos(a) * speed + facing * 2.5,
+        vy: Math.sin(a) * speed * 0.75,
+        life: 1,
+        maxLife: 0.3 + this.rand() * 0.3,
+        size: 1.5 + this.rand() * 2,
+        color: i % 4 === 0 ? 0xffffff : 0xa9d4ff,
+        gravity: 4,
+        streak: false,
+      });
+    }
+  }
+
+  /**
+   * A chest opening. The one moment in a run that is purely good, so it gets
+   * to be loud — and louder for a legendary, because the whole distance-weighted
+   * table is built around that roll being possible anywhere and the player has
+   * to be able to feel which one they got without reading a number.
+   */
+  loot(x: number, y: number, count: number, legendary: boolean) {
+    const n = legendary ? 34 : Math.min(10 + count * 2, 24);
+    for (let i = 0; i < n; i++) {
+      // Thrown up and out of the lid, so it reads as coming from inside.
+      const a = -Math.PI / 2 + (this.rand() - 0.5) * 1.9;
+      const speed = (legendary ? 5 : 3) + this.rand() * (legendary ? 9 : 5);
+      this.push({
+        x: x + (this.rand() - 0.5) * 22,
+        y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        life: 1,
+        maxLife: 0.5 + this.rand() * 0.5,
+        size: 1.5 + this.rand() * (legendary ? 3 : 2),
+        color: legendary
+          ? i % 3 === 0
+            ? 0xffffff
+            : 0xffd479
+          : i % 4 === 0
+            ? 0xffffff
+            : 0x7fd8f5,
+        gravity: 22,
+        streak: false,
+      });
+    }
+  }
+
   /** Dust kicked outward when the smash lands. */
   impact(x: number, y: number, radius: number) {
     for (let i = 0; i < 22; i++) {

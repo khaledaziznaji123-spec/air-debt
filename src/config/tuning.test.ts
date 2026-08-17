@@ -50,9 +50,11 @@ test("the parry window is shorter than the punish for missing it", () => {
 });
 
 test("all durations are whole ticks", () => {
+  // Numbers only. `tuning.traps` carries a behaviour flag alongside its
+  // durations now, and a boolean is not a tick count.
   const durations = [
     ...Object.values(tuning.combat),
-    ...Object.values(tuning.traps),
+    ...Object.values(tuning.traps).filter((v) => typeof v === "number"),
     tuning.air.base,
     tuning.air.perUpgrade,
     tuning.air.max,

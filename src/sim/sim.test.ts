@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createInitialState, step, replay, Intent } from "./index.ts";
 import { createRng, deriveSeed } from "./rng.ts";
-import type { InputRecord } from "./intents.ts";
+import type { InputRecord, Intents } from "./intents.ts";
 import { tuning } from "../config/tuning.ts";
+import { worldEnd } from "../config/dungeon.ts";
 import type { SimState } from "./types.ts";
 
 /**
@@ -112,14 +113,15 @@ test("a finished run is a fixed point", () => {
   assert.equal(after.outcome, "transformed");
 });
 
-test("the player cannot leave the room", () => {
+test("the player cannot leave the world", () => {
   // Deliberately NOT entered: walking back out of the mouth would end the run
   // before the left-hand wall was ever reached.
   let state = createInitialState(6000);
   for (let i = 0; i < 2000; i++) state = step(state, Intent.Left);
-  assert.ok(state.player.x >= tuning.player.width / 2);
-  for (let i = 0; i < 4000; i++) state = step(state, Intent.Right);
-  assert.ok(state.player.x <= tuning.room.width - tuning.player.width / 2);
+  assert.ok(state.player.x >= tuning.player.width / 2, "the left wall holds");
+  assert.ok(state.player.x <= worldEnd - tuning.player.width / 2);
+  // The far wall is fifty thousand units away, so reaching it from here would
+  // outlast any tank. It gets its own test in dungeon.test.ts, from close up.
 });
 
 test("a mistimed block costs more than the parry window it was aiming for", () => {
@@ -145,6 +147,70 @@ test("slide cancels a committed attack", () => {
     "PRD FR-5.10: slide interrupts the swing",
   );
   assert.ok(state.player.dashTicks > 0);
+});
+
+/** Slide, then hold the same direction until the dash runs out. */
+function slideInto(state: SimState, dir: Intents): SimState {
+  state = step(state, dir | Intent.Slide);
+  for (let i = 0; i <= tuning.movement.slideDuration; i++) {
+    state = step(state, dir);
+  }
+  return state;
+}
+
+test("holding the direction through a slide carries into a sprint", () => {
+  let state = started(600);
+  assert.equal(state.player.running, false, "a run never starts from standing");
+
+  state = slideInto(state, Intent.Right);
+  assert.equal(state.player.running, true);
+  assert.equal(
+    Math.abs(state.player.vx),
+    tuning.movement.runSpeed,
+    "the sprint is faster than the walk it replaces",
+  );
+
+  // And it holds for as long as the direction does.
+  for (let i = 0; i < 60; i++) state = step(state, Intent.Right);
+  assert.equal(state.player.running, true);
+});
+
+test("a sprint is lost by letting go, steering, or committing", () => {
+  const sprinting = slideInto(started(600), Intent.Right);
+  assert.equal(sprinting.player.running, true);
+
+  assert.equal(
+    step(sprinting, Intent.None).player.running,
+    false,
+    "releasing the direction drops back to a walk",
+  );
+  assert.equal(
+    step(sprinting, Intent.Left).player.running,
+    false,
+    "steering the other way sheds the momentum",
+  );
+  assert.equal(
+    step(sprinting, Intent.Right | Intent.Crouch).player.running,
+    false,
+    "you cannot sprint while crouched",
+  );
+  assert.equal(
+    step(sprinting, Intent.Right | Intent.Attack).player.running,
+    false,
+    "committing to a swing breaks stride",
+  );
+});
+
+test("a backstep never becomes a sprint", () => {
+  // Slide with no direction held is the backstep variant — it travels the
+  // opposite way to facing, so there is no forward momentum to inherit.
+  let state = started(600);
+  state = step(state, Intent.Slide);
+  assert.equal(state.player.stance, "backstepping");
+  for (let i = 0; i <= tuning.movement.backstepDuration; i++) {
+    state = step(state, Intent.Right);
+  }
+  assert.equal(state.player.running, false);
 });
 
 test("seeded rng is reproducible and stream-independent", () => {

@@ -24,6 +24,34 @@ export const Intent = {
   Block: 1 << 6,
   Stun: 1 << 7,
   Bow: 1 << 8,
+  /** Flick a lever, or step through an open shortcut door (PRD FR-3). */
+  Interact: 1 << 9,
+  /**
+   * Drink the two potions that have a button. One flag each rather than a
+   * "use item" flag plus a selection, because a selection is state the replay
+   * would have to carry and the player would have to manage mid-fight — and
+   * there are two of them.
+   *
+   * Two of the six potions have no flag. The spike ward spends itself on the
+   * trap that would have taken you down and iron skin on the next hit — both
+   * are moments that give you half a second to react, which is not enough time
+   * to also choose an item.
+   */
+  Restoration: 1 << 10,
+  Breath: 1 << 11,
+  Haste: 1 << 12,
+  Venom: 1 << 13,
+  /**
+   * Milk. The fifth potion with a button, and the first one added since the row
+   * was written — the four before it are drunk on 1 to 4.
+   *
+   * It replaced the fireproofing draught rather than joining it: one thing that
+   * stops both fire and poison is one button, and two things that each stopped
+   * one were two buttons for a decision the environment had already made.
+   */
+  Milk: 1 << 14,
+  /** The shield. Seven seconds where nothing at all gets through. */
+  Shield: 1 << 15,
 } as const;
 
 export type IntentFlag = (typeof Intent)[keyof typeof Intent];
