@@ -364,10 +364,15 @@ export default function Shop({
         )}
       </div>
 
+      {/* This said nothing here survived closing the tab, and that balances
+          belonged to a server that did not exist. Both were true in early August
+          and neither has been true for a while — the balance is the server's
+          now, exactly as FR-15.8 asks, and it is credited from a replay of the
+          run that earned it rather than from anything this browser claims. */}
       <p className="text-[11px] text-shop-card/35">
-        Potions come back every run. Nothing here survives closing the tab —
-        balances are the server&apos;s to own (FR-15.8, ARCH AD-10) and there is
-        no server yet.
+        Potions come back every run. Everything else is kept on your account —
+        loot is credited from the run itself, on the server, so it follows you to
+        any browser you sign in from.
       </p>
     </div>
   );

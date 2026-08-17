@@ -557,7 +557,29 @@ export class Renderer {
     const lamp = statsFor(state.loadout).sightAhead;
     this.lampLead +=
       (lamp * p.facing - this.lampLead) * Math.min(1, this.frameDt * 3.2);
-    const target = x - VIEW_W * 0.42 + this.lampLead;
+    let target = x - VIEW_W * 0.42 + this.lampLead;
+
+    /**
+     * THE PLAYER STAYS ON SCREEN. Always, whatever the lamp is doing.
+     *
+     * A maxed lantern leads seven hundred and twenty units, and the player
+     * normally sits five hundred and thirty-eight from the left edge — so
+     * facing right the camera ran a hundred and eighty-two units PAST them and
+     * the player was off the left edge of a screen that was following them.
+     * Reported from a ranked run, which is where it had to show up first:
+     * ranked hands out every piece of gear at full tier, so it is the only mode
+     * where anybody had three lantern levels at once.
+     *
+     * The lead is worth having — it is the whole item, and seeing further ahead
+     * in the parkour is a different game. So it is kept and then bounded: the
+     * body may be led toward an edge but never past this margin of one, which
+     * means the lamp does as much as it can without ever costing you sight of
+     * yourself.
+     */
+    const MARGIN = 190;
+    const screenX = x - target;
+    if (screenX < MARGIN) target = x - MARGIN;
+    if (screenX > VIEW_W - MARGIN) target = x - (VIEW_W - MARGIN);
     // The chamber is built past the end of the world, so the camera has to be
     // allowed out there too. Without this the view stopped at `worldEnd` and
     // the boss fight happened entirely off the right-hand edge of the screen —

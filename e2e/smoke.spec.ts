@@ -300,10 +300,8 @@ test.describe("sound", () => {
       const w = window as unknown as { __ctxMade: number };
       w.__ctxMade = 0;
       const Real = window.AudioContext;
-      // @ts-expect-error — replacing a constructor for the length of one test.
       window.AudioContext = class extends Real {
-        constructor(...args: unknown[]) {
-          // @ts-expect-error — pass-through.
+        constructor(...args: ConstructorParameters<typeof AudioContext>) {
           super(...args);
           w.__ctxMade++;
         }
