@@ -147,6 +147,10 @@ is worse than never having written it.
   behind either. PvP needs live connections that do not exist yet.
 - **Keyboard only.** No touch controls, so the game does not work on a phone.
   Web first as validation, native app later — but that is a plan, not a build.
+- **No music.** There is sound — every noise synthesised at the moment it plays,
+  no audio files anywhere — and an ambience bed per environment, but nothing
+  written. A dungeon with a tune in it is a different game and the oxygen clock
+  is doing the tension already.
 - **Transactional email is the default Supabase mailer**, which is rate-limited
   to a handful an hour project-wide and will not reliably deliver to strangers.
   Sign-up and password reset work; they will not survive an audience. Real SMTP

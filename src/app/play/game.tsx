@@ -25,6 +25,7 @@ import { KeyboardInput } from "@/render/keyboard";
 import { readBindings } from "../keybinds";
 import { readPrefs } from "../prefs";
 import { Renderer } from "@/render/renderer";
+import { GameAudio } from "@/render/audio";
 import { TICK_HZ, tuning } from "@/config/tuning";
 import { shortcuts } from "@/config/dungeon";
 import Shop from "./shop";
@@ -387,6 +388,25 @@ export default function Game({
     // rebinding mid-run would change what a held key means halfway through, and
     // the input log records intents rather than keys anyway.
     const input = new KeyboardInput(readBindings());
+
+    /**
+     * Sound. Suspended until a gesture resumes it, because every browser blocks
+     * audio that starts on its own — and pressing Play is that gesture.
+     */
+    const audio = new GameAudio();
+    audio.setVolume(prefs.volume);
+    audio.setMuted(prefs.muted);
+    audio.resume();
+    // Live, rather than read once. A volume slider you have to restart a run to
+    // hear is a volume slider nobody believes is working.
+    const onPrefs = () => {
+      const now = readPrefs();
+      audio.setVolume(now.volume);
+      audio.setMuted(now.muted);
+    };
+    window.addEventListener("airdebt-prefs", onPrefs);
+    // The camera is the renderer's, and sound needs it to know what is nearby.
+    const cameraOf = (r: Renderer | null) => (r ? r.cameraLeft() : 0);
     // The replay log every run accumulates (PRD FR-15.5). Not yet submitted —
     // the run lifecycle endpoints come with the persistence story.
     const log: InputRecord[] = [];
@@ -476,6 +496,10 @@ export default function Game({
 
         renderer?.setDebug(debugRef.current);
         renderer?.draw(state, previous, Math.min(accumulator / MS_PER_TICK, 1));
+        // The same frame, heard. Reads the event stream the renderer just drew
+        // from, so a noise and the particle it belongs to cannot disagree about
+        // whether the thing happened.
+        audio.frame(state, previous, cameraOf(renderer));
         const depth = Math.max(
           0,
           Math.round(state.deepestX - tuning.room.entranceX),
@@ -643,6 +667,8 @@ export default function Game({
       disposed = true;
       cancelAnimationFrame(raf);
       input.detach();
+      window.removeEventListener("airdebt-prefs", onPrefs);
+      audio.destroy();
       renderer?.destroy();
       // A no-op once `destroy` has removed it, but the renderer may never have
       // finished starting — the canvas must not outlive this effect either way.
@@ -653,7 +679,7 @@ export default function Game({
     // be torn down and rebuilt — but leaving it out would be a lie about what
     // the effect reads, and the next person to make it a piece of state would
     // find out the hard way.
-  }, [runKey, tutorial, ranked, prefs.reduceFlashes]);
+  }, [runKey, tutorial, ranked, prefs.reduceFlashes, prefs.volume, prefs.muted]);
 
   const startRun = async () => {
     setLastRun(null);

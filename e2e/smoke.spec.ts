@@ -254,16 +254,36 @@ test.describe("settings", () => {
     ).toHaveCount(0);
   });
 
+  test("there is a volume control, and it is not decoration", async ({ page }) => {
+    // The page used to say sound "belongs to a system that does not exist". It
+    // exists now — every noise is synthesised at the moment it plays — so this
+    // asserts the control is real and remembers itself.
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { name: /^Sound$/i })).toBeVisible();
+
+    const volume = page.getByRole("slider", { name: /volume/i });
+    await expect(volume).toBeVisible();
+    await volume.fill("35");
+    await page.reload();
+    await expect(page.getByRole("slider", { name: /volume/i })).toHaveValue("35");
+
+    // Muting disables the slider rather than hiding it, so the level you had is
+    // still visible while it is off.
+    await page.getByRole("checkbox").first().check();
+    await expect(page.getByRole("slider", { name: /volume/i })).toBeDisabled();
+  });
+
   test("the display switches are there and both are real", async ({ page }) => {
     await page.goto("/settings");
     await expect(page.getByRole("heading", { name: /^Display$/i })).toBeVisible();
     await expect(page.getByText(/Reduce flashing/i)).toBeVisible();
     await expect(page.getByText(/Debug overlay/i)).toBeVisible();
 
-    // And they persist, or they are decoration.
-    const flashes = page.getByRole("checkbox").first();
+    // And they persist, or they are decoration. The first checkbox on the page
+    // is Mute now, so this targets the switch by its own label.
+    const flashes = page.getByRole("checkbox").nth(1);
     await flashes.check();
     await page.reload();
-    await expect(page.getByRole("checkbox").first()).toBeChecked();
+    await expect(page.getByRole("checkbox").nth(1)).toBeChecked();
   });
 });

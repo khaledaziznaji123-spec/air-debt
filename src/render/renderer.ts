@@ -497,6 +497,11 @@ export class Renderer {
     return new Renderer(app, art);
   }
 
+  /** Where the view starts, so sound can tell what is within earshot. */
+  cameraLeft(): number {
+    return this.cameraX;
+  }
+
   setDebug(on: boolean): void {
     this.debug = on;
     this.debugText.visible = on;

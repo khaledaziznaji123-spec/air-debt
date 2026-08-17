@@ -33,11 +33,23 @@ export type Prefs = {
    * in three other places.
    */
   reduceFlashes: boolean;
+  /**
+   * How loud, 0 to 1.
+   *
+   * There is audio now — synthesised at the moment it plays, see
+   * `src/render/audio.ts` — so this is a real control rather than the
+   * placeholder the settings page used to refuse to draw.
+   */
+  volume: number;
+  muted: boolean;
 };
 
 export const DEFAULT_PREFS: Prefs = {
   debugOverlay: false,
   reduceFlashes: false,
+  // Not full. A game that opens at maximum is a game somebody turns off.
+  volume: 0.7,
+  muted: false,
 };
 
 export function readPrefs(): Prefs {
@@ -48,9 +60,15 @@ export function readPrefs(): Prefs {
     const stored = JSON.parse(raw) as Partial<Prefs>;
     // Field by field rather than a spread, so a stored file with extra or
     // wrongly-typed keys cannot put anything unexpected into the object.
+    const volume =
+      typeof stored.volume === "number" && Number.isFinite(stored.volume)
+        ? Math.max(0, Math.min(1, stored.volume))
+        : DEFAULT_PREFS.volume;
     return {
       debugOverlay: stored.debugOverlay === true,
       reduceFlashes: stored.reduceFlashes === true,
+      volume,
+      muted: stored.muted === true,
     };
   } catch {
     return DEFAULT_PREFS;
