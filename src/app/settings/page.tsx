@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AdminBox from "./admin-box";
 import ControlsBox from "./controls-box";
+import ViewBox from "./view-box";
 
 export const metadata = { title: "Air Debt — settings" };
 
@@ -35,6 +36,27 @@ export default function SettingsPage() {
         </h1>
 
         <ControlsBox />
+
+        <ViewBox />
+
+        {/* The account lives on its own page rather than being duplicated here.
+            Two places to change one name is two places for them to disagree. */}
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-rock-edge bg-rock/40 p-5">
+          <div>
+            <h2 className="font-mono text-sm font-black tracking-[0.2em] text-brass uppercase">
+              Account
+            </h2>
+            <p className="mt-1 text-xs text-foreground/45">
+              Your name, what you have banked, and signing out.
+            </p>
+          </div>
+          <Link
+            href="/profile"
+            className="rounded-full border-2 border-b-4 border-rock-edge px-4 py-1.5 font-mono text-[10px] font-black tracking-[0.16em] text-foreground/70 uppercase transition-transform hover:-translate-y-0.5 active:translate-y-0.5 active:border-b-2"
+          >
+            Open profile
+          </Link>
+        </section>
 
         <AdminBox />
 

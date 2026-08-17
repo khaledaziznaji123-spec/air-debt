@@ -103,9 +103,12 @@ export default function ControlsBox() {
 
       <p className="text-xs leading-relaxed text-foreground/50">
         Click a key to change it, then press the one you want.{" "}
-        <span className="text-foreground/70">Esc</span> cancels. A key can only
+        <span className="text-foreground/70">Esc</span> cancels,{" "}
+        <span className="text-foreground/70">+</span> adds another, and{" "}
+        <span className="text-foreground/70">×</span> removes one. A key can only
         mean one thing, so binding a key that is already in use takes it from
-        whatever had it.
+        whatever had it. Remove every key from an action and it says so — reset
+        puts everything back.
       </p>
 
       <ul className="flex flex-col divide-y divide-rock-edge/60">
@@ -117,9 +120,20 @@ export default function ControlsBox() {
               className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5"
             >
               <span className="text-sm">
-                <span className="font-semibold text-foreground/90">
+                <span
+                  className={
+                    keys.length === 0
+                      ? "font-semibold text-punch"
+                      : "font-semibold text-foreground/90"
+                  }
+                >
                   {action.name}
                 </span>
+                {keys.length === 0 && (
+                  <span className="ml-2 rounded-sm border border-punch/50 px-1.5 py-0.5 font-mono text-[10px] font-black tracking-[0.14em] text-punch uppercase">
+                    unbound
+                  </span>
+                )}
                 {action.note && (
                   <span className="ml-2 text-xs text-foreground/40">
                     {action.note}
@@ -144,22 +158,24 @@ export default function ControlsBox() {
                         ? "press…"
                         : keyLabel(code)}
                     </button>
-                    {/* Only offered while more than one key is bound. Removing
-                        the last one leaves an action nobody can perform, and
-                        "why can I not jump" is a bad puzzle. */}
-                    {keys.length > 1 && (
-                      <button
-                        onClick={() => {
-                          const next = unbind(bindings, code);
-                          setBindings(next);
-                          writeBindings(next);
-                        }}
-                        aria-label={`Remove ${keyLabel(code)}`}
-                        className="ml-0.5 px-1 text-xs text-foreground/30 hover:text-punch"
-                      >
-                        ×
-                      </button>
-                    )}
+                    {/* Every key can go, including the last one.
+                        This used to be hidden once an action was down to a
+                        single key, to stop somebody leaving themselves unable to
+                        jump. That is a real risk and hiding the button was the
+                        wrong answer to it: it made removal look unavailable
+                        rather than unwise. The action says UNBOUND in warning
+                        colours instead, which is both honest and reversible. */}
+                    <button
+                      onClick={() => {
+                        const next = unbind(bindings, code);
+                        setBindings(next);
+                        writeBindings(next);
+                      }}
+                      aria-label={`Remove ${keyLabel(code)}`}
+                      className="ml-0.5 px-1 text-sm text-foreground/40 hover:text-punch"
+                    >
+                      ×
+                    </button>
                   </span>
                 ))}
 

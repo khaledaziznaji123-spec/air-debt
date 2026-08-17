@@ -503,6 +503,19 @@ export class Renderer {
   }
 
   /**
+   * Damp the full-screen colour flashes.
+   *
+   * Damped rather than removed. The flash marks a real event — a potion taken, a
+   * legendary found — and deleting it outright would take away information; a
+   * fifth of the strength still reads as "something happened" without filling
+   * the screen. A player who needs this needs it because the screen filling is
+   * the problem, not because the event is.
+   */
+  setReduceFlashes(on: boolean): void {
+    this.flashScale = on ? 0.2 : 1;
+  }
+
+  /**
    * @param state the newest simulation state
    * @param alpha how far between the previous tick and this one we are, 0..1
    */
@@ -5205,10 +5218,12 @@ export class Renderer {
    * player is far enough in for the camera to have moved. Which is most of the
    * dungeon, and exactly where getting hit matters more.
    */
+  private flashScale = 1;
+
   private flashScreen(colour: number, alpha: number): void {
     this.fxGfx
       .rect(this.cameraX, 0, VIEW_W, VIEW_H)
-      .fill({ color: colour, alpha });
+      .fill({ color: colour, alpha: alpha * this.flashScale });
   }
 
   /**

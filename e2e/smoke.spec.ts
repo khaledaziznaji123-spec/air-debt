@@ -222,4 +222,48 @@ test.describe("settings", () => {
         .getByRole("button", { name: "Space", exact: true }),
     ).toBeVisible();
   });
+
+  test("a key can be removed, down to none, and it says so", async ({ page }) => {
+    // Removal used to be hidden once an action was down to its last key, to stop
+    // somebody leaving themselves unable to jump. That made removal look
+    // unavailable rather than unwise, which is the wrong answer — so every key
+    // can go now and the action says UNBOUND instead.
+    await page.goto("/settings");
+    const row = page.locator("li").filter({ hasText: "Stun" }).first();
+    // Wait for the keys to actually be on screen before touching them. The
+    // component reads its bindings from localStorage in a microtask after mount,
+    // so a loop that starts too early finds nothing to remove, breaks
+    // immediately, and asserts against a row it never changed. Passed alone and
+    // failed in the suite, which is the signature of exactly this.
+    await expect(row.getByRole("button", { name: /^Remove / })).toHaveCount(1);
+    // Regex, because the badge is uppercased in CSS and reads as UNBOUND.
+    await expect(row.getByText(/unbound/i)).toHaveCount(0);
+
+    // Strip every key off it.
+    for (let i = 0; i < 6; i++) {
+      const remove = row.getByRole("button", { name: /^Remove / });
+      if ((await remove.count()) === 0) break;
+      await remove.first().click();
+    }
+    await expect(row.getByText(/unbound/i)).toBeVisible();
+
+    // Reset brings it back, which is what makes the whole thing safe to offer.
+    await page.getByRole("button", { name: /reset to default/i }).click();
+    await expect(
+      page.locator("li").filter({ hasText: "Stun" }).first().getByText(/unbound/i),
+    ).toHaveCount(0);
+  });
+
+  test("the display switches are there and both are real", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { name: /^Display$/i })).toBeVisible();
+    await expect(page.getByText(/Reduce flashing/i)).toBeVisible();
+    await expect(page.getByText(/Debug overlay/i)).toBeVisible();
+
+    // And they persist, or they are decoration.
+    const flashes = page.getByRole("checkbox").first();
+    await flashes.check();
+    await page.reload();
+    await expect(page.getByRole("checkbox").first()).toBeChecked();
+  });
 });

@@ -23,6 +23,7 @@ import {
 } from "@/sim";
 import { KeyboardInput } from "@/render/keyboard";
 import { readBindings } from "../keybinds";
+import { readPrefs } from "../prefs";
 import { Renderer } from "@/render/renderer";
 import { TICK_HZ, tuning } from "@/config/tuning";
 import { shortcuts } from "@/config/dungeon";
@@ -109,14 +110,15 @@ export default function Game({
    * size mismatch and more than one collision bug were caught.
    */
   /**
-   * The renderer's development readout — tick counts, velocities, the sprite
-   * manifest check.
+   * View preferences, from Settings. Read once when the loop is built.
    *
-   * A constant rather than state now that the checkbox under the canvas is gone.
-   * It stays because it is how more than one collision bug and the art size
-   * mismatch were found; flip it here when something needs looking at.
+   * Nothing in here can touch a run — they are what the player SEES, and the
+   * simulation is a pure reducer over intents that knows nothing about any of
+   * it. That is why they are safe to keep on the machine rather than the
+   * account.
    */
-  const debug = false;
+  const [prefs] = useState(readPrefs);
+  const debug = prefs.debugOverlay;
   /**
    * Developer mode, from Settings. See `src/app/admin.ts`.
    *
@@ -437,6 +439,9 @@ export default function Game({
         return;
       }
       renderer.setDebug(debugRef.current);
+      // Damped rather than removed: the flash marks a real event and deleting it
+      // outright would take away information. See `setReduceFlashes`.
+      renderer.setReduceFlashes(prefs.reduceFlashes);
       input.attach();
 
       const frame = (nowMs: number) => {
@@ -648,7 +653,7 @@ export default function Game({
     // be torn down and rebuilt — but leaving it out would be a lie about what
     // the effect reads, and the next person to make it a piece of state would
     // find out the hard way.
-  }, [runKey, tutorial, ranked]);
+  }, [runKey, tutorial, ranked, prefs.reduceFlashes]);
 
   const startRun = async () => {
     setLastRun(null);
