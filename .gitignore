@@ -45,3 +45,6 @@ Thumbs.db
 # playwright mcp scratch
 .playwright-mcp/
 play-initial.png
+
+# TypeScript incremental build cache — a local artifact, not source.
+*.tsbuildinfo

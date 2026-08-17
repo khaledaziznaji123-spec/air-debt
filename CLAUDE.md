@@ -2,12 +2,16 @@
 
 A free-to-play 2D action roguelite for browser. Timed dungeon extraction loop.
 
-**No application code exists yet.** Planning artifacts only.
+**Playable single-player loop, with no server behind it.** Read
+[`README.md`](README.md)'s "What is built" and "What is not" before assuming a
+subsystem exists — the gap between what the PRD specifies and what runs today is
+wide, and most of it is the server.
 
 ## Read these first
 
 - [PRD (final)](_bmad-output/planning-artifacts/prds/prd-dungeon-master-2026-08-03/prd.md) — the v1 spec. Start here
 - [PRD addendum](_bmad-output/planning-artifacts/prds/prd-dungeon-master-2026-08-03/addendum.md) — hitbox model, asset sourcing, technical depth
+- [Architecture spine](_bmad-output/planning-artifacts/architecture/architecture-air-debt-2026-08-04/ARCHITECTURE-SPINE.md) — every `ARCH AD-*` the code cites
 - [PRD review](_bmad-output/planning-artifacts/prds/prd-dungeon-master-2026-08-03/review-rubric.md) — quality review and what is still owed
 - [Product brief](_bmad-output/planning-artifacts/briefs/brief-dungeon-master-2026-08-03/brief.md) — vision, scope, business model
 - Memlogs (`.memlog.md` in each artifact folder) — every decision and its reasoning
@@ -17,7 +21,14 @@ historical; the project is Air Debt.
 
 ## Method
 
-**BMAD.** Completed: product brief, PRD. Next: UX → architecture → epics/stories → dev.
+**BMAD.** Completed: product brief, PRD, architecture.
+
+Development then ran ahead of the method — the sim, the renderer and the run
+loop were built straight from the PRD and the architecture spine, without the UX
+and epics/stories passes in between. Worth knowing rather than tidying away: the
+reasoning those passes would have recorded lives in the code as comments
+instead, so a change that contradicts one will not fail a document review. It
+will only fail the tests, and only where a test exists.
 
 ## Decisions already made — do not relitigate
 

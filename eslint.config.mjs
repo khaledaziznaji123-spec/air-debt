@@ -18,7 +18,15 @@ const eslintConfig = defineConfig([
   // parity (FR-9.5) and replay validation (FR-15.7) at the same time.
   // See src/sim/README.md for the reasoning.
   {
-    files: ["src/sim/**/*.ts", "src/sim/**/*.tsx"],
+    // `src/config` is included because the simulation imports it. A transcendental
+    // in a tuning table is exactly as fatal to replay validation as one in the
+    // reducer, and until now the rule could not see it.
+    files: [
+      "src/sim/**/*.ts",
+      "src/sim/**/*.tsx",
+      "src/config/**/*.ts",
+      "src/config/**/*.tsx",
+    ],
     rules: {
       "no-restricted-globals": [
         "error",
