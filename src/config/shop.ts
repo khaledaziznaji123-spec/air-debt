@@ -861,18 +861,21 @@ export function pay(price: Price, purse: Purse): Purse | null {
  * rather than skill, and the shop is a progression system for Story — bringing
  * it into a competitive mode makes the competition about the shop.
  *
- * Three things are deliberately NOT levelled up:
+ * POTIONS ARE REMOVED ENTIRELY — not maxed, not left as owned. Nobody carries
+ * one.
  *
- *   POTIONS stay exactly as the player owns them. They are consumables bought
- *   per run rather than a tier you climb, and handing everybody a full belt
- *   would flatten the one in-run decision ranked still has — when to spend.
+ * Leaving them as the account owned them was the first attempt and it was
+ * wrong for the reason the whole mode exists: a player who has bought a
+ * restoration goes into the same run with a bar of health more than a player who
+ * has not, and the board then measures the shop again, just in a smaller way.
+ * Handing everybody a full belt is the other end of the same mistake — it makes
+ * every ranked run a potion run and flattens the in-run decision instead.
+ * Nobody having any is the only version that is actually equal.
  *
- *   COSMETICS stay as they are, which means you play ranked wearing what you
- *   already own and nothing else. A mode that hands out the skins would make
- *   the cosmetics shelf pointless, and they change nothing in the simulation
- *   anyway — a skin is drawn by the view and a pet does not exist to it.
- *
- *   Anything with no tiers is left alone by definition.
+ * COSMETICS stay as they are, which means you play ranked wearing what you
+ * already own and nothing else. They change nothing in the simulation — a skin
+ * is drawn by the view and a pet does not exist to it — so there is nothing to
+ * equalise, and a mode that handed them out would make the shelf pointless.
  *
  * Built from `SHOP` rather than written down, so an item added tomorrow is
  * included the day it is added rather than the day somebody remembers this.
@@ -880,9 +883,13 @@ export function pay(price: Price, purse: Purse): Purse | null {
 export function rankedLoadout(owned: Loadout): Loadout {
   const levels: Record<string, number> = { ...owned.levels };
   for (const item of SHOP) {
-    if (!item.id.startsWith("weapon.") && !item.id.startsWith("gear.")) continue;
-    // `tiers` absent means a single-purchase item: owning it is level one.
-    levels[item.id] = item.tiers ?? 1;
+    if (item.id.startsWith("weapon.") || item.id.startsWith("gear.")) {
+      // `tiers` absent means a single-purchase item: owning it is level one.
+      levels[item.id] = item.tiers ?? 1;
+      continue;
+    }
+    // Every potion off the belt, whether it was bought or not.
+    if (item.potion) delete levels[item.id];
   }
   return { levels, skin: owned.skin, pet: owned.pet };
 }

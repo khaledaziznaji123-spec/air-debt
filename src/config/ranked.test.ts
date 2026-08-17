@@ -24,27 +24,37 @@ test("every weapon and every piece of gear comes out at full tier", () => {
   }
 });
 
-test("potions and cosmetics are left exactly as the account has them", () => {
-  // Potions are a consumable bought per run rather than a tier climbed, and
-  // handing everybody a full belt would flatten the one in-run decision ranked
-  // still has: when to spend. Cosmetics change nothing in the simulation, so
-  // handing them out would only make the shelf pointless.
+test("nobody carries a potion into a ranked run", () => {
+  // Not maxed and not left as owned: removed. A player who has bought a
+  // restoration would otherwise start with a bar of health more than one who has
+  // not, and the board would be measuring the shop again in a smaller way.
   const owned = {
-    levels: { "potion.restoration": 1, "weapon.honed": 1 },
+    levels: {
+      "potion.restoration": 1,
+      "potion.shield": 1,
+      "potion.milk": 1,
+      "weapon.honed": 1,
+    },
     skin: "skin.void",
     pet: "pet.moth",
   };
   const r = rankedLoadout(owned);
   for (const item of SHOP) {
-    if (item.id.startsWith("weapon.") || item.id.startsWith("gear.")) continue;
-    assert.equal(
-      levelOf(r, item.id),
-      levelOf(owned, item.id),
-      `${item.id} was changed by ranked`,
-    );
+    if (!item.potion) continue;
+    assert.equal(levelOf(r, item.id), 0, `${item.id} came into a ranked run`);
   }
+  // Cosmetics are untouched — they change nothing the simulation can see.
   assert.equal(r.skin, "skin.void", "ranked changed the skin");
   assert.equal(r.pet, "pet.moth", "ranked changed the pet");
+});
+
+test("two accounts play ranked with identical potions: none", () => {
+  const a = rankedLoadout({ levels: { "potion.shield": 1 }, skin: null, pet: null });
+  const b = rankedLoadout(EMPTY_LOADOUT);
+  for (const item of SHOP) {
+    if (!item.potion) continue;
+    assert.equal(levelOf(a, item.id), levelOf(b, item.id));
+  }
 });
 
 test("an empty account and a rich one play ranked on the same gear", () => {

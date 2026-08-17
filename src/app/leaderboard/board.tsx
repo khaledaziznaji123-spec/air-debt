@@ -134,9 +134,9 @@ export default function Board({
             question anybody asks about a leaderboard is what it is measuring. */}
         <p className="mt-3 rounded-lg border border-[#1c2531] bg-[#10151d] p-3 text-sm leading-relaxed text-[#8a94a6]">
           Ranked runs only. Everyone plays on every weapon and every piece of
-          gear at full tier, with all shortcuts open — so a time or a haul is how
-          well it was played, not how long the account has been grinding. Your
-          potions and your look are your own.
+          gear at full tier, with all shortcuts open and no potions at all — so a
+          time or a haul is how well it was played, not how long the account has
+          been grinding. Only your look is your own, and it changes nothing.
         </p>
       </div>
 

@@ -720,7 +720,7 @@ export default function Game({
             nothing and it is the difference between a hard lesson and a trap. */}
         {ranked && (
           <span className="rounded-full border border-lens/40 bg-lens/10 px-4 py-1.5 text-xs font-semibold tracking-[0.16em] text-lens uppercase">
-            Ranked — full gear, all shortcuts
+            Ranked — full gear, no potions
           </span>
         )}
         {practice && !tutorial && (
