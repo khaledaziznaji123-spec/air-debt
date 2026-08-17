@@ -2354,7 +2354,23 @@ export function step(state: SimState, intents: Intents): SimState {
   // The launch lockout is already the flag for "you are riding something and
   // not steering it" — the wall jump and the vent both use it — so the water
   // yields to it for exactly as long as it lasts.
-  if (inWater && wallLaunch <= 0) {
+  /**
+   * Standing on something with your head out is WADING, and wading is walking.
+   *
+   * The swim block used to run for any contact with water at all, while the
+   * stance only said "swimming" once the head went under — so the shallows were
+   * a state with swim physics and a walk animation. You moved at a kick instead
+   * of a stride, your vertical control belonged to the water, and the sprite
+   * walked through all of it. Reported, accurately, as lagging and as the swim
+   * animation not being there.
+   *
+   * Now the two agree. Feet on something and head above the line: ordinary
+   * walking, ordinary animation. Anything else in water: the swim block owns it
+   * and the stance says so.
+   */
+  const wading = grounded && !submerged(x, y, BODY.height);
+
+  if (inWater && wallLaunch <= 0 && !wading) {
     const wantsUpNow = wantsUp;
     const wasIn = waterAt(prev.x, prev.y, BODY.height) !== null;
     if (!wasIn) {
