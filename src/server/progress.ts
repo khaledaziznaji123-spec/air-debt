@@ -152,21 +152,42 @@ export async function buy(
   // "trust me" is not a thing to write into a payment path.
   if (!price) return { error: "That level is not for sale." };
 
-  const gems = [...current.gems];
-  for (const [gradeIndex, cost] of price.gems.entries()) {
-    if ((gems[gradeIndex] ?? 0) < cost)
-      return { error: "Not enough of that stone." };
-  }
-  if (current.gold < price.gold) return { error: "Not enough gold." };
+  /**
+   * An admin takes it without paying, and the SERVER records that.
+   *
+   * The client used to do this on its own: in developer mode it wrote the level
+   * into local storage and deliberately never called this function, on the
+   * reasoning that the purse on screen was not the real one so charging the real
+   * one would empty a balance nobody had seen. Reasonable while a run read its
+   * gear locally — and quietly broken the moment a run started taking its
+   * loadout from the server, because the server had never been told. Every admin
+   * purchase evaporated at the start of the next run: buy ten air tanks, get
+   * thirty seconds.
+   *
+   * The flag is a column now rather than a browser setting, so this is the
+   * honest place for the rule. Note what it does NOT skip: the item still has to
+   * exist, still has to be a real level, and still cannot go past its top tier.
+   * Free is not the same as unchecked.
+   */
+  const free = current.admin;
 
-  for (const [gradeIndex, cost] of price.gems.entries()) {
-    gems[gradeIndex] = (gems[gradeIndex] ?? 0) - cost;
+  const gems = [...current.gems];
+  if (!free) {
+    for (const [gradeIndex, cost] of price.gems.entries()) {
+      if ((gems[gradeIndex] ?? 0) < cost)
+        return { error: "Not enough of that stone." };
+    }
+    if (current.gold < price.gold) return { error: "Not enough gold." };
+
+    for (const [gradeIndex, cost] of price.gems.entries()) {
+      gems[gradeIndex] = (gems[gradeIndex] ?? 0) - cost;
+    }
   }
 
   const next: StoredProgress = {
     ...current,
     gems,
-    gold: current.gold - price.gold,
+    gold: free ? current.gold : current.gold - price.gold,
     levels: { ...current.levels, [item.id]: level + 1 },
   };
   await save(userId, next);

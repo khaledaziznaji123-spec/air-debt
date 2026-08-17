@@ -998,11 +998,16 @@ export default function Game({
               // the request carries the item id and nothing else — there is no
               // number in it worth tampering with. If it refuses, its answer
               // replaces the optimistic one above.
-              if (!adminRef.current) {
-                void buy(id).then((r) => {
-                  if ("error" in r) setSyncNote(r.error);
-                });
-              }
+              //
+              // ALWAYS, including in developer mode. This used to be skipped for
+              // an admin, which meant the purchase existed only in this browser
+              // — fine while a run read its gear from here, and broken the day a
+              // run started reading it from the server. Buying ten air tanks and
+              // still getting thirty seconds was that bug. The server knows who
+              // is an admin now and hands it over without charging.
+              void buy(id).then((r) => {
+                if ("error" in r) setSyncNote(r.error);
+              });
             }}
           />
         )}
