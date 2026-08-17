@@ -8,15 +8,23 @@ timer. You fight inward, take what you can carry, and leave before the clock
 runs out — because if it does, you breathe the virus that made the monsters and
 become one of them.
 
-> **Testing:** `air.testingOverride` in `tuning.ts` is set to 120 seconds so a
-> run is long enough to walk the environment and look at it. The design value is
-> 30, and the whole time budget is solved against 30 — set the override to
-> `null` before drawing any balance conclusion from play.
+**Status: live, and server-authoritative.**
+[**air-debt-game.vercel.app**](https://air-debt-game.vercel.app)
 
-**Status: playable, single-player, and with nothing behind it.** The run loop
-works end to end — walk in, fight, open chests, walk back out with what you
-carried. Everything it remembers, it remembers in memory: close the tab and the
-balance is gone. `npm run dev`, then `/play`.
+All five environments, the shop, the final boss, a tutorial, and two
+leaderboards. Accounts are real, balances live on the server, and a leaderboard
+score is verified by replaying the player's own keystrokes through the same
+simulation — so a score cannot be posted without playing it.
+
+Locally: `npm run dev`, then `/play`. `npm test` for the 284 simulation tests,
+`npm run e2e` for the browser tests, and
+`BASE_URL=https://air-debt-game.vercel.app npm run e2e` to check the live site
+after a deploy.
+
+> **Testing:** `air.testingOverride` in `tuning.ts` can be set to lengthen a run
+> so an environment is long enough to walk and look at. The design value is 30
+> seconds and the whole time budget is solved against 30 — set the override to
+> `null` before drawing any balance conclusion from play.
 
 ## Start here
 
@@ -38,7 +46,7 @@ balance is gone. `npm run dev`, then `/play`.
   platform, past the rams. A standing jump clears 183 and one kick adds 163, so
   getting out takes the jump and two kicks — the first piece in the dungeon that
   a movement option is required for rather than merely useful in.
-- **The Warden**, environment 1's mini-boss. It stands on the far exit with two
+- **The Warden**, the mini-boss holding the rock environment. It stands on the far exit with two
   archers strapped to its shoulders, and the exit does not work while it lives —
   the mouth always does, so meeting it with four seconds of air is a decision
   rather than a death. Two attacks with opposite answers, chosen by where you
@@ -49,7 +57,34 @@ balance is gone. `npm run dev`, then `/play`.
   player onto low ledges. Jumping is a *verb* (FR-7.1), so an enemy without it
   still cannot follow, and its impulse is under the player's: height stays an
   advantage rather than becoming immunity.
-- **One environment, built.** Ledges, spike pits, raised blocks, ladders,
+- **All five environments** — parkour, poison, water, rock, fire, in that order,
+  hardest last. Each is built from set pieces on a slot grid and validated by
+  checks rather than by eye: that every ledge is reachable, that no lintel is
+  lower than a slide, that the time budget still closes with the shortcuts open.
+  The water one is a flooded cave modelled on the Chac Mol cenote system — a rock
+  too tall to jump, a roofed passage under it, and two shafts of daylight that are
+  the only air between the mouths. It used to be open sea you could swim the
+  length of on the surface, which made every dive optional and the breath meter
+  decorative.
+- **The Revenant**, at the bottom. It has the player's own move set with the stun
+  swapped for a fireball, and it parries half of what is thrown at it — so the
+  one move it cannot answer is the one move it does not own. That is the whole
+  design of the fight in a sentence.
+- **A tutorial that teaches by gating.** Twelve stations, each one geometry a
+  player who has not learnt its verb cannot pass: the gap is wider than a stride,
+  the lintel lower than a crouch, the slot deeper than a jump. Nine of them are
+  verified by a bot that plays with exactly one move disabled and has to get
+  stuck at the matching station — which is what stops a lesson quietly becoming
+  scenery. Nothing in there can kill you.
+- **Accounts, and an economy the browser cannot write.** Sign-up, confirmation,
+  sign-in, password reset by one-time link, and a renameable display name. Every
+  balance lives on the server; there is no request anywhere that adds to one by
+  asking. Loot is credited from a replay of the run that earned it.
+- **Two leaderboards** — richest banked run and fastest Revenant kill, each
+  all-time and weekly. A score is never submitted: the keystrokes are, and the
+  server replays them through the same reducer from a seed it issued before the
+  run began. Forging a score means forging a run.
+- **Environment 1's set pieces.** Ledges, spike pits, raised blocks, ladders,
   pressure-plate traps, and three moving hazards — a swinging blade, a ceiling
   crusher and a sliding saw — laid out as nine set pieces in a fixed rotation.
   The geometry does not reshuffle (FR-2); the encounters and chests do.
@@ -97,41 +132,40 @@ balance is gone. `npm run dev`, then `/play`.
 
 ## What is not
 
-Read this before assuming a subsystem exists.
+Read this before assuming a subsystem exists. It is the honest half of the
+document and it is kept honest deliberately — every line that used to be here
+about there being no server, no Supabase and one environment of five was true in
+early August and stayed on the page for a week after it stopped being true, which
+is worse than never having written it.
 
-- **No server.** No run lifecycle, no replay submission, no Supabase — the
-  `supabase/` directory is empty and there are no API routes. Balances and
-  levered shortcuts live in a React ref, which is precisely what FR-15 and
-  ARCH AD-10 say the client may never own. Every run accumulates a replay log
-  and throws it away.
-- **Developer mode**, from Settings on the home screen. Say the word and
-  nothing can end a run: damage does not kill, the air does not run out, and the
-  shop has more money than it has stock. It survives a reload and only the
-  second phrase turns it off. It is a switch with a word on it and not a lock —
-  but `SimState.god` travels with the run, so a server can refuse to credit
-  anything made with it on. See [`src/app/admin.ts`](src/app/admin.ts).
-- **One of four modes.** The home screen lists Story, PvP, Speed run and
-  Survival, and only Story goes anywhere. The other three are drawn and marked
-  SOON rather than hidden, because a player arriving should be able to see the
-  shape of the game — but nothing behind them exists. The four corner buttons
-  (Shop, Profile, Settings, Contact us) are in the same state.
-- **No server, so no real persistence.** Progress is in `localStorage`
-  ([`src/app/progress.ts`](src/app/progress.ts)), which survives a refresh and
-  nothing else: it is per-browser, trivially editable, and exactly the account
-  FR-15.8 and ARCH AD-10 say must be server-owned. That file is deleted rather
-  than migrated the day there is a server.
-- **Four of the five environments.** Only the first is built; `environmentsBuilt`
-  is what stops the player walking into the rest. Because there is one
-  environment, there is one grade of gem — the distance-weighted loot table
-  underneath is complete and rolls the full range, but what it hands out is
-  clamped to the bands the game has a use for, and the clamp lifts on its own.
-- **One boss of three.** The Warden is built; the environment 2-5 mini-bosses
-  and the final boss have time-budget entries and no behaviour. The bow is bound
-  to a key and does nothing.
+- **No monetisation.** No payment provider, no checkout, no real-money offers —
+  nothing. The economy it would sell into is finished and server-owned, which was
+  the part that had to be right first: selling currency on top of an economy the
+  client can write is selling something you do not control.
+- **No PvP and no Survival.** Both are drawn on the home screen and marked SOON
+  rather than hidden, so a player can see the shape of the game. Nothing is
+  behind either. PvP needs live connections that do not exist yet.
+- **Keyboard only.** No touch controls, so the game does not work on a phone.
+  Web first as validation, native app later — but that is a plan, not a build.
+- **Transactional email is the default Supabase mailer**, which is rate-limited
+  to a handful an hour project-wide and will not reliably deliver to strangers.
+  Sign-up and password reset work; they will not survive an audience. Real SMTP
+  is a twenty-minute job nobody has done.
+- **Nothing rate-limits `/api/runs`**, and submitting a run costs a full replay
+  of it. Fine for the number of players there are, which is none.
+- **No CI.** The tests are good and they run when somebody remembers. Nothing
+  stops a broken commit reaching production.
+- **Developer mode**, from Settings on the home screen. Say the word and nothing
+  can end a run. It is a switch with a word on it and not a lock — but it is no
+  longer the client's decision either: whether a run is invincible is a column on
+  the account, frozen onto the run before the first tick, and read from there by
+  the replay that scores it. Such runs are allowed on the leaderboards and are
+  labelled on the row.
 - **Goblins jump but do not climb.** They can follow onto a low ledge and no
-  further — no ladders, no tall towers, no pathfinding. A goblin that jumps
-  into a pit dies in it, which is the point: hazards kill enemies outright, so
-  the answer to a crowd can be leading them over one.
+  further — no ladders, no tall towers, no pathfinding. A goblin that jumps into
+  a pit dies in it, which is the point: hazards kill enemies outright, so the
+  answer to a crowd can be leading them over one.
+- **The bow is bound to a key and does nothing.**
 
 Artifact folders keep a `dungeon-master` slug from before the project was named.
 The paths are historical.

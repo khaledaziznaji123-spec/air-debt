@@ -2,10 +2,12 @@
 
 A free-to-play 2D action roguelite for browser. Timed dungeon extraction loop.
 
-**Playable single-player loop, with no server behind it.** Read
+**Live at [air-debt-game.vercel.app](https://air-debt-game.vercel.app), and
+server-authoritative.** All five environments, the shop, the final boss, a
+tutorial and two replay-verified leaderboards. Read
 [`README.md`](README.md)'s "What is built" and "What is not" before assuming a
-subsystem exists — the gap between what the PRD specifies and what runs today is
-wide, and most of it is the server.
+subsystem exists — the remaining gap is monetisation, PvP, Survival and touch
+controls, not the server.
 
 ## Read these first
 
