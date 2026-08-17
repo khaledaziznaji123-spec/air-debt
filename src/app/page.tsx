@@ -165,6 +165,14 @@ export default function Landing() {
         <p className="font-mono text-xs tracking-widest text-[#5a6875]">
           AIR DEBT — IN DEVELOPMENT
         </p>
+        {/* A stranger arrives here rather than on the home screen, so the way to
+            reach anybody has to exist on this page too. */}
+        <a
+          href="/contact"
+          className="mt-3 inline-block font-mono text-xs tracking-widest text-[#5fd9cf]/70 underline decoration-[#5fd9cf]/25 underline-offset-4 transition-colors hover:text-[#5fd9cf] hover:decoration-[#5fd9cf]"
+        >
+          CONTACT AND SUPPORT
+        </a>
       </footer>
     </main>
   );

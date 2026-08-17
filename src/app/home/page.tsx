@@ -90,7 +90,14 @@ const CORNERS = [
     at: "left-5 bottom-5",
     href: "/settings",
   },
-  { key: "contact", label: "Contact us", at: "right-5 bottom-5", href: null },
+  // Went nowhere until now: a label you could click that did nothing, which is
+  // worse than not having it.
+  {
+    key: "contact",
+    label: "Contact us",
+    at: "right-5 bottom-5",
+    href: "/contact",
+  },
 ] as const;
 
 /** Tailwind cannot see a class name built at runtime, so the map is literal. */

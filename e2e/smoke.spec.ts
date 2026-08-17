@@ -137,3 +137,45 @@ test.describe("the game itself", () => {
     expect(html).toContain("/play?tutorial=1");
   });
 });
+test.describe("contact and support", () => {
+  test("the button goes somewhere, and every channel is real", async ({
+    page,
+  }) => {
+    // Checked in the served HTML rather than by clicking, because /home sits
+    // behind the sign-in gate — a signed-out browser gets the gate and never
+    // renders the corners at all. The markup is what carries the href, and the
+    // failure being guarded against is a corner with `href: null`, which is
+    // exactly what this one was for weeks: a label you could click that did
+    // nothing.
+    const home = await page.request.get("/home");
+    expect(home.status()).toBe(200);
+    // Unquoted, because the corners are rendered inside the RSC payload where
+    // the attribute arrives escaped as \"/contact\" rather than "/contact".
+    expect(await home.text()).toContain("/contact");
+
+    await page.goto("/contact");
+    await expect(
+      page.getByRole("heading", { name: /contact and support/i }),
+    ).toBeVisible();
+
+    // WhatsApp has to be the wa.me form — no plus, no spaces — or it opens a
+    // broken chat. Worth asserting because it is easy to "tidy" into the
+    // display format and never notice.
+    await expect(
+      page.getByRole("link", { name: /\+971 52 513 4070/ }).first(),
+    ).toHaveAttribute("href", "https://wa.me/971525134070");
+
+    // And the dialable one needs the international prefix to work abroad.
+    const tel = page.locator('a[href^="tel:"]');
+    await expect(tel).toHaveAttribute("href", "tel:+971525134070");
+
+    await expect(page.getByText("crusher_21_33")).toBeVisible();
+  });
+
+  test("the landing page offers a way to reach somebody", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("link", { name: /contact and support/i }),
+    ).toHaveAttribute("href", "/contact");
+  });
+});
