@@ -14,9 +14,10 @@ import { useAuthLinkLanding } from "./link-landing.ts";
  * than like the menu. The screenshots do most of the work; the words get out of
  * their way.
  *
- * Everything here is real. The three shots are captures of the actual build at
- * the actual resolution, not mock-ups, and the one line under the title is the
- * game's rule rather than a slogan.
+ * Everything here is real. The four shots are captures of the live build — a run
+ * with one point eight seconds left on the clock, the flooded cave, the shop,
+ * and a leaderboard with real scores on it — not mock-ups, and the one line
+ * under the title is the game's rule rather than a slogan.
  */
 
 /**
@@ -31,22 +32,28 @@ import { useAuthLinkLanding } from "./link-landing.ts";
  */
 const SHOTS = [
   {
-    src: "/shots/rock.png",
-    alt: "Inside the dungeon: the player facing two goblins with an archer on a ledge above, a chest beside them, and the air clock running down at the top of the screen.",
+    src: "/shots/fire.png",
+    alt: "The fire environment with one point eight seconds of air left: the clock and its dial have gone red, a phoenix hangs above a lava pit throwing fire down at the player, and two chests sit further along the ledge.",
     title: "Thirty seconds",
-    line: "The clock is the whole game. Every fight, every chest and every step back out is spent from the same tank — and the biggest tank you can buy still is not enough to walk the whole way. Shortcuts are the only way the maths works.",
+    line: "The clock is the whole game. Every fight, every chest and every step back out is spent from the same tank — and the biggest tank you can buy still is not enough to walk the whole way. Shortcuts are the only way the maths ever works.",
   },
   {
-    src: "/shots/fire.png",
-    alt: "The fire environment: a mini-boss holding a doorway, a curtain of lava pouring from the ceiling, and a flamethrower enemy further in.",
+    src: "/shots/cenote.png",
+    alt: "Underwater in the flooded cave: two shafts of daylight fall through openings in the rock to the seabed, sharks cross the middle distance, and chests sit on the bottom.",
     title: "Five environments, hardest last",
-    line: "Parkour, poison, water, rock, fire. Something is standing in the way out of each one and it will not let you slide past. At the bottom is a boss built from your own move set, with the one move it cannot answer left out of its own.",
+    line: "Parkour, poison, water, rock, fire. The water is a flooded cave modelled on a real one — the rock closes over your head and the only air is the shafts of daylight. Down there you are on a second clock: five breaths.",
   },
   {
     src: "/shots/shop.png",
-    alt: "The shop, showing weapons with gem prices, upgrade levels and short descriptions.",
+    alt: "The shop, gear tab: an air tank at ten of ten and maxed, then rib plate, gripped boots and long stride with their gem prices and upgrade levels.",
     title: "What you carry back",
     line: "Gems come out of the dark and turn into reach, air and armour. Walk out and it is yours. Die down there and it stays down there — that decision, made with the clock running, is the game.",
+  },
+  {
+    src: "/shots/board.png",
+    alt: "The leaderboard, showing four ranked runs with their scores.",
+    title: "Scores you cannot fake",
+    line: "A score is never submitted. The keys that were pressed are, and the server replays them through the same simulation from a seed it issued before the run began. Forging a score means forging a run.",
   },
 ];
 
@@ -120,8 +127,8 @@ export default function Landing() {
                 <Image
                   src={shot.src}
                   alt={shot.alt}
-                  width={1281}
-                  height={721}
+                  width={1400}
+                  height={713}
                   className="h-auto w-full"
                   /* The first one is what the page is judged on, so it is not
                      lazy: it should be there when the hero is. */
