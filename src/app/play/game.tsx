@@ -22,6 +22,7 @@ import {
   type Carried,
 } from "@/sim";
 import { KeyboardInput } from "@/render/keyboard";
+import { readBindings } from "../keybinds";
 import { Renderer } from "@/render/renderer";
 import { TICK_HZ, tuning } from "@/config/tuning";
 import { shortcuts } from "@/config/dungeon";
@@ -380,7 +381,10 @@ export default function Game({
     let raf = 0;
     let renderer: Renderer | null = null;
 
-    const input = new KeyboardInput();
+    // Whatever this machine has bound. Read once per run rather than watched:
+    // rebinding mid-run would change what a held key means halfway through, and
+    // the input log records intents rather than keys anyway.
+    const input = new KeyboardInput(readBindings());
     // The replay log every run accumulates (PRD FR-15.5). Not yet submitted —
     // the run lifecycle endpoints come with the persistence story.
     const log: InputRecord[] = [];

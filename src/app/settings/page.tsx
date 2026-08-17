@@ -1,15 +1,23 @@
 import Link from "next/link";
 import AdminBox from "./admin-box";
+import ControlsBox from "./controls-box";
 
 export const metadata = { title: "Air Debt — settings" };
 
 /**
  * Settings.
  *
- * There is one setting, and it is the developer switch. Everything a settings
- * page would normally hold — volume, keybinds, resolution — belongs to systems
- * that do not exist yet, and listing them greyed out would be four more lies on
- * a screen that already has enough.
+ * Keys, and the developer switch.
+ *
+ * The keymap is the real one: PRD FR-9.2 asks for bindings to be fully
+ * rebindable, and the keyboard module has always taken them as an argument — the
+ * only missing piece was somewhere to change one. It doubles as the controls
+ * reference that used to sit under the game canvas.
+ *
+ * Still not here, and still not listed as "coming soon": volume, because there
+ * is no audio in the game at all, and resolution, because the canvas is a fixed
+ * internal size stretched to fit. Both would be greyed-out lies on a screen that
+ * has had enough of those.
  */
 export default function SettingsPage() {
   return (
@@ -26,11 +34,14 @@ export default function SettingsPage() {
           Settings
         </h1>
 
+        <ControlsBox />
+
         <AdminBox />
 
-        <p className="text-xs text-foreground/40">
-          Sound, keybinds and display will live here. None of those systems
-          exist yet, so none of them are listed.
+        <p className="text-xs leading-relaxed text-foreground/40">
+          There is no sound in the game yet, so there is no volume here. The
+          canvas is a fixed size stretched to your window, so there is no
+          resolution either. Both will appear when they are real.
         </p>
       </div>
     </main>

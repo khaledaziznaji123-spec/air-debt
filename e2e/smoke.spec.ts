@@ -179,3 +179,47 @@ test.describe("contact and support", () => {
     ).toHaveAttribute("href", "/contact");
   });
 });
+
+test.describe("settings", () => {
+  test("the controls can be read and rebound", async ({ page }) => {
+    // The page had one switch on it and a note saying keybinds belonged to a
+    // system that did not exist. It did exist — `KeyboardInput` has always taken
+    // a binding map — so the only missing piece was somewhere to change one.
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { name: /^Controls$/i })).toBeVisible();
+
+    // Every action a player can bind is listed, which is also the reference that
+    // used to sit under the game canvas.
+    for (const action of ["Jump", "Attack", "Block / parry", "Stun", "Interact"]) {
+      await expect(page.getByText(action, { exact: true })).toBeVisible();
+    }
+
+    // Jump is bound to Space by default. Rebinding it to G should stick.
+    const jumpRow = page.locator("li").filter({ hasText: "Jump" }).first();
+    // `exact` throughout: the remove button beside each key is labelled
+    // "Remove Space", and a substring match picks that up too.
+    await jumpRow.getByRole("button", { name: "Space", exact: true }).click();
+    await expect(
+      jumpRow.getByRole("button", { name: "press…", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("KeyG");
+    await expect(
+      jumpRow.getByRole("button", { name: "G", exact: true }),
+    ).toBeVisible();
+
+    // And survive a reload, because a keymap that forgets itself is worse than
+    // no keymap at all.
+    await page.reload();
+    const afterReload = page.locator("li").filter({ hasText: "Jump" }).first();
+    await expect(
+      afterReload.getByRole("button", { name: "G", exact: true }),
+    ).toBeVisible();
+
+    // Reset puts it back.
+    await page.getByRole("button", { name: /reset to default/i }).click();
+    await expect(
+      page.locator("li").filter({ hasText: "Jump" }).first()
+        .getByRole("button", { name: "Space", exact: true }),
+    ).toBeVisible();
+  });
+});
