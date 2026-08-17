@@ -69,6 +69,30 @@ class Canvas:
                     if dx * dx + dy * dy <= r * r:
                         self.set(x + dx, y + dy, col)
 
+    @staticmethod
+    def _hash(x, y, seed):
+        """Deterministic 0..1 from a coordinate. Not random: the same sprite
+        must texture identically on every run, or the art churns in git."""
+        h = (int(x) * 374761393 + int(y) * 668265263 + seed * 2246822519) & 0xFFFFFFFF
+        h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+        return ((h ^ (h >> 16)) & 0xFFFFFFFF) / 0xFFFFFFFF
+
+    def mottle(self, base, col, density, seed=0, scale=2):
+        """Break a flat fill into blotches of another tone.
+
+        Only pixels already holding `base` are touched, so this can never spill
+        past a silhouette. `scale` clumps the noise — at 1 it reads as static,
+        which is worse than the flat colour it was meant to fix.
+
+        Run AFTER shade() and BEFORE outline(): by then the rim lighting has
+        turned the edge pixels into highlight and shadow tones, so only the
+        interior still matches `base` and the lit edge survives intact.
+        """
+        for y in range(self.h):
+            for x in range(self.w):
+                if self.px[y][x] == base and self._hash(x // scale, y // scale, seed) < density:
+                    self.px[y][x] = col
+
     def shade(self):
         """Light from the upper left. Applied after all shapes are down."""
         out = [row[:] for row in self.px]

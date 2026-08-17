@@ -38,6 +38,29 @@ Match the exported PNG, so source and output are obviously paired:
 | `goblin-idle.piskel` | `public/art/goblin-idle.png` |
 | `goblin-windup.piskel` | `public/art/goblin-windup.png` |
 | `tile-floor.piskel` | `public/art/tile-floor.png` |
+| `cave-entrance-src.png` | `public/art/cave-entrance.png` |
+
+## Generated art
+
+Some sprites are produced by script rather than drawn, and for those the SCRIPT
+is the source — editing the exported PNG means losing the change the next time
+anyone runs it.
+
+| Script | Export |
+|---|---|
+| `generate-player.py` | every `public/art/player-*.png`, and the `knight-*` skins |
+| `generate-pets.py` | every `public/art/pet-*.png` |
+| `generate-goblin.py` | every `public/art/goblin-*.png` and `archer-*.png` |
+| `generate-warden.py` | every `public/art/warden-*.png` — the mini-boss |
+| `generate-chest.py` | `public/art/prop-chest.png` |
+| `generate-loot.py` | `public/art/prop-loot.png` — five gem grades then a coin |
+| `generate-items.py` | `public/art/items.png` — one icon per shop item, in `SHOP` order |
+| `generate-menu-strip.py` | `menu-back.png`, `menu-front.png` — the home screen's scrolling dungeon |
+| `extend-cave.py` | `public/art/cave-entrance.png`, from the drawn `cave-entrance-src.png` |
+
+`extend-cave.py` is the odd one: its input is hand-drawn and kept here, and the
+script only grows the rock to the ceiling and fades the far lip into shadow. Do
+not point it at its own output — it would extend an already-extended image.
 
 ## Note
 
