@@ -26,6 +26,7 @@ import { readBindings } from "../keybinds";
 import { readPrefs } from "../prefs";
 import { Renderer } from "@/render/renderer";
 import { GameAudio } from "@/render/audio";
+import { ui } from "../ui-audio";
 import { TICK_HZ, tuning } from "@/config/tuning";
 import { shortcuts } from "@/config/dungeon";
 import Shop from "./shop";
@@ -178,6 +179,11 @@ export default function Game({
    * prop server-side.
    */
   const [shopOpen, setShopOpen] = useState(openShop);
+  // Opening and closing the shop are the two biggest state changes in the shell,
+  // so they get their own noises rather than a plain click.
+  useEffect(() => {
+    if (shopOpen) ui.open();
+  }, [shopOpen]);
   /**
    * The hub. A finished run puts the player back at the mouth and waits here,
    * so starting a run is always a deliberate press rather than something that
@@ -1022,7 +1028,14 @@ export default function Game({
               // still getting thirty seconds was that bug. The server knows who
               // is an admin now and hands it over without charging.
               void buy(id).then((r) => {
-                if ("error" in r) setSyncNote(r.error);
+                if ("error" in r) {
+                  // Refused. The optimistic write above is about to be undone,
+                  // so the sound is the only warning that arrives on time.
+                  ui.no();
+                  setSyncNote(r.error);
+                } else {
+                  ui.ok();
+                }
               });
             }}
           />

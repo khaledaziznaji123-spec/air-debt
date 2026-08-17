@@ -12,6 +12,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import UiSounds from "./ui-sounds";
+
 export const metadata: Metadata = {
   title: "Air Debt",
   description:
@@ -24,7 +26,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* One delegated listener for the whole shell, so every button on every
+            page makes a noise — including pages nobody has written yet. It
+            renders nothing and deliberately ignores the game canvas, which has
+            its own voice. */}
+        <UiSounds />
+        {children}
+      </body>
     </html>
   );
 }

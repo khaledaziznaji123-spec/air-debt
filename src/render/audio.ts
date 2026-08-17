@@ -23,6 +23,41 @@ import type { SimEvent, SimState } from "../sim/index.ts";
 import { tuning } from "../config/tuning.ts";
 import { themeAt, type Theme } from "../config/dungeon.ts";
 
+/**
+ * A voice for each monster.
+ *
+ * `hit` and `die` used to be one sound for all twelve of them, which meant a
+ * crowd was a single texture repeated — you could not tell from listening what
+ * you had just struck or what had just died. Each one gets a pitch and a timbre
+ * instead: the goblin is a short bark, the warden is a slab of low noise, the
+ * bee is a whine, the phoenix is a shriek, and the Revenant is the goblin an
+ * octave down and twice as long, because it is meant to read as the same thing
+ * grown terrible.
+ *
+ * `tell` is the important one and it is new. It plays the moment an enemy enters
+ * its wind-up, which is the frame the player is supposed to react to — the whole
+ * combat design is reading a telegraph and answering it (PRD FR-5), and until now
+ * that reading was entirely visual. A tell you can hear is a tell you can answer
+ * while looking somewhere else, which is what makes a crowd survivable.
+ */
+const VOICE: Record<
+  string,
+  { hit: number; die: number; tell: number; type: OscillatorType; long?: boolean }
+> = {
+  "enemy.goblin": { hit: 220, die: 180, tell: 340, type: "square" },
+  "enemy.archer": { hit: 300, die: 240, tell: 520, type: "triangle" },
+  "enemy.bee": { hit: 900, die: 1200, tell: 1500, type: "sawtooth" },
+  "enemy.crab": { hit: 260, die: 150, tell: 400, type: "square" },
+  "enemy.lizard": { hit: 340, die: 200, tell: 600, type: "sawtooth" },
+  "enemy.shark": { hit: 160, die: 90, tell: 240, type: "sawtooth", long: true },
+  "enemy.flamer": { hit: 280, die: 170, tell: 460, type: "square" },
+  "enemy.phoenix": { hit: 1100, die: 1400, tell: 1800, type: "triangle" },
+  "enemy.kiln": { hit: 120, die: 70, tell: 200, type: "sawtooth", long: true },
+  "enemy.hollow": { hit: 140, die: 80, tell: 220, type: "sine", long: true },
+  "enemy.warden": { hit: 110, die: 60, tell: 180, type: "sawtooth", long: true },
+  "enemy.revenant": { hit: 100, die: 52, tell: 150, type: "sawtooth", long: true },
+};
+
 /** How far a sound can be from the camera before it is not worth playing. */
 const EARSHOT = 900;
 
@@ -267,7 +302,33 @@ export class GameAudio {
 
     if (state.entered) this.setBed(themeAt(state.player.x));
 
-    for (const e of state.events) this.event(e, near);
+    // Telegraphs first: the wind-up is the frame the player has to answer, and
+    // hearing it is what makes a fight you are not looking directly at
+    // survivable. Matched by index because the array is stable within a run.
+    for (let i = 0; i < state.enemies.length; i++) {
+      const now = state.enemies[i];
+      const was = previous.enemies[i];
+      if (!was || was.kind !== now.kind) continue;
+      if (now.phase === "telegraphing" && was.phase !== "telegraphing") {
+        if (near(now.x) && this.throttled(`tell${now.kind}`, 90)) {
+          this.tell(now.kind);
+        }
+      }
+    }
+
+    for (const e of state.events) {
+      // Worked out before the noise, because the event says where a blow landed
+      // and not what it landed on.
+      const at = (e as { x?: number; y?: number }).x;
+      if (typeof at === "number") {
+        this.hitKind = this.nearestKind(
+          state,
+          at,
+          (e as { y?: number }).y ?? 0,
+        );
+      }
+      this.event(e, near);
+    }
     this.continuous(state, previous);
   }
 
@@ -357,6 +418,72 @@ export class GameAudio {
     this.lastBreath = p.breath;
   }
 
+  /**
+   * Which monster the next `enemyHit` belongs to.
+   *
+   * The event carries a position and a damage figure but not a kind, and adding
+   * one would be a change to the simulation's vocabulary for the benefit of the
+   * speakers — so it is matched here instead, by finding whatever was closest to
+   * where the blow landed. Wrong only if two different monsters are standing in
+   * the same place, at which point nobody can tell what they are hearing anyway.
+   */
+  private hitKind: string = "enemy.goblin";
+
+  private nearestKind(state: SimState, x: number, y: number): string {
+    let best = "enemy.goblin";
+    let closest = Infinity;
+    for (const e of state.enemies) {
+      const d = Math.abs(e.x - x) + Math.abs(e.y - y);
+      if (d < closest) {
+        closest = d;
+        best = e.kind;
+      }
+    }
+    return best;
+  }
+
+  private hurt(kind: string): void {
+    const v = VOICE[kind] ?? VOICE["enemy.goblin"];
+    this.tone({
+      from: v.hit,
+      to: v.hit * 0.55,
+      decay: v.long ? 0.22 : 0.1,
+      gain: 0.1,
+      type: v.type,
+    });
+    this.hiss({ from: v.hit * 3, to: v.hit, decay: 0.1, gain: 0.08, q: 0.9 });
+  }
+
+  private died(kind: string): void {
+    const v = VOICE[kind] ?? VOICE["enemy.goblin"];
+    this.tone({
+      from: v.die * 1.6,
+      to: v.die * 0.4,
+      decay: v.long ? 0.9 : 0.4,
+      gain: 0.14,
+      type: v.type,
+      fat: true,
+    });
+    this.hiss({
+      from: v.die * 4,
+      to: v.die * 0.6,
+      decay: v.long ? 0.8 : 0.35,
+      gain: 0.09,
+    });
+  }
+
+  /** The wind-up, heard. See `VOICE`. */
+  private tell(kind: string): void {
+    const v = VOICE[kind] ?? VOICE["enemy.goblin"];
+    this.tone({
+      from: v.tell * 0.7,
+      to: v.tell,
+      decay: v.long ? 0.36 : 0.18,
+      gain: 0.09,
+      type: v.type,
+    });
+  }
+
   /** One event, one noise. */
   private event(e: SimEvent, near: (x: number) => boolean): void {
     // Everything with a position is only heard if it happened nearby. A shark
@@ -383,12 +510,12 @@ export class GameAudio {
         this.tone({ from: 1100, to: 700, decay: 0.16, gain: 0.08, type: "sine" });
         break;
       case "enemyHit":
-        this.hiss({ from: 700, to: 200, decay: 0.11, gain: 0.11, q: 0.8 });
-        this.tone({ from: 190, to: 90, decay: 0.1, gain: 0.09, type: "sawtooth" });
+        // The voice is chosen where the blow lands, so a crowd is legible: what
+        // you just hit says what it was.
+        this.hurt(this.hitKind);
         break;
       case "enemyDied":
-        this.tone({ from: 260, to: 60, decay: 0.4, gain: 0.13, type: "sawtooth" });
-        this.hiss({ from: 900, to: 120, decay: 0.35, gain: 0.09 });
+        this.died(this.hitKind);
         break;
       case "playerHit":
         // Lower and wetter than hitting something else, so the two are never

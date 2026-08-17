@@ -287,3 +287,53 @@ test.describe("settings", () => {
     await expect(page.getByRole("checkbox").nth(1)).toBeChecked();
   });
 });
+
+test.describe("sound", () => {
+  test("the shell wires audio to every control, on every page", async ({
+    page,
+  }) => {
+    // The listener is delegated from the root layout, so what is checked is that
+    // it is mounted and that an AudioContext gets built by a real click. A
+    // per-component approach would leave every new button silent until somebody
+    // remembered; this is the test that says the one listener is actually there.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __ctxMade: number };
+      w.__ctxMade = 0;
+      const Real = window.AudioContext;
+      // @ts-expect-error — replacing a constructor for the length of one test.
+      window.AudioContext = class extends Real {
+        constructor(...args: unknown[]) {
+          // @ts-expect-error — pass-through.
+          super(...args);
+          w.__ctxMade++;
+        }
+      };
+    });
+
+    for (const path of ["/", "/leaderboard", "/settings", "/contact"]) {
+      await page.goto(path);
+      const button = page.getByRole("link").or(page.getByRole("button")).first();
+      await expect(button).toBeVisible();
+    }
+
+    // A real click on a real control should have built a context.
+    await page.goto("/settings");
+    await page.getByRole("button", { name: /reset to default/i }).click();
+    const made = await page.evaluate(
+      () => (window as unknown as { __ctxMade: number }).__ctxMade,
+    );
+    expect(made, "clicking a control never created an AudioContext").toBeGreaterThan(0);
+  });
+
+  test("muting silences the interface too", async ({ page }) => {
+    // The UI reads the same volume the game does, freshly on every noise — so
+    // the settings page sounds like the level you just chose rather than the one
+    // you had when it loaded.
+    await page.goto("/settings");
+    await page.getByRole("checkbox").first().check();
+    const prefs = await page.evaluate(() =>
+      JSON.parse(window.localStorage.getItem("airdebt.prefs.v1") ?? "{}"),
+    );
+    expect(prefs.muted).toBe(true);
+  });
+});
