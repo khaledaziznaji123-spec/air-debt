@@ -217,16 +217,6 @@ export default function Board({
                     you
                   </span>
                 )}
-                {/* Marked, always. These runs are allowed on the board — the
-                    accounts that can make them are set by hand in the database
-                    — but an invincible score sitting unmarked above everybody
-                    else would make the board worthless, and not lying is the
-                    only thing a leaderboard has to sell. */}
-                {row.admin && (
-                  <span className="ml-2 rounded-sm border border-brass/40 px-1.5 py-0.5 text-[10px] tracking-[0.16em] text-brass uppercase">
-                    dev · no risk
-                  </span>
-                )}
               </span>
               <span className="shrink-0 font-mono text-sm text-brass">
                 {board === "speed"

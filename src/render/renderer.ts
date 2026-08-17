@@ -575,9 +575,11 @@ export class Renderer {
      * shoved out of frame.
      */
     const LEAD_CAP = 200;
+    // Forward too, for the same reason and to keep the two in agreement: a lean
+    // that flipped while the cone did not would put the light behind the view.
     const lamp = Math.min(statsFor(state.loadout).sightAhead, LEAD_CAP);
     this.lampLead +=
-      (lamp * p.facing - this.lampLead) * Math.min(1, this.frameDt * 3.2);
+      (lamp - this.lampLead) * Math.min(1, this.frameDt * 3.2);
     let target = x - VIEW_W * 0.42 + this.lampLead;
 
     /**
@@ -4253,8 +4255,21 @@ export class Renderer {
     if (reach <= 0) return;
     const g = this.lampGfx;
     g.clear();
-    const p = state.player;
-    const dir = p.facing;
+    /**
+     * FORWARD, always. The lamp does not swing round when the player does.
+     *
+     * It used to follow `facing`, which meant every turn threw the whole cone —
+     * most of the lit ground on screen — across to the other side, and the
+     * camera lean went with it. Turning round is not rare in this game: you turn
+     * to fight, you turn at a wall, and you turn for the entire walk home. So
+     * the one item whose job is steady visibility was the thing making the
+     * screen lurch.
+     *
+     * Fixed rather than smoothed, because smoothing only makes a slow lurch. A
+     * hooded lamp pointed the way you are going is also the easier thing to
+     * believe: it is strapped on, not held out.
+     */
+    const dir = 1;
     const eye = y - tuning.player.height * 0.72;
 
     // The cone. Bands rather than a gradient fill, on the same principle the
