@@ -1,0 +1,825 @@
+<title>Air Debt</title>
+<meta name="description" content="A browser action-roguelite where the run timer is the oxygen in your mask." />
+
+<style>
+  /*
+   * A DESCENT, not a deck.
+   *
+   * The game shows a depth bar across the top of the screen — 49,592m, ENV 5/5 —
+   * and the whole design of the thing is going down and deciding when to turn
+   * back. So the page is that: a fixed gauge on the left edge that fills as you
+   * scroll, marked with the five environments. Scrolling is descending.
+   *
+   * Committed dark, deliberately. This is a pitch for a game about being
+   * underground in the dark with a torch; a light theme would be a different
+   * product. Every colour is painted explicitly so the page holds on any host
+   * ground rather than borrowing one.
+   *
+   * The palette is the GAME's palette, lifted from src/app/globals.css, so the
+   * deck and the thing it is selling are one system rather than two.
+   */
+  :root {
+    --ground: #0b0e14;
+    --surface: #10151d;
+    --edge: #1c2531;
+    --edge-lit: #2b3644;
+    /* The air. Everything that means "alive, breathing, time left". */
+    --air: #5fd9cf;
+    /* Gems and gold. Everything that means "what you carried back". */
+    --brass: #ffd166;
+    /* The clock under ten seconds. Used sparingly and only where it is true. */
+    --warn: #e56b6f;
+    --text: #e7ecf2;
+    /* Neutrals biased blue, toward the ground, rather than a flat grey. */
+    --muted: #8a94a6;
+    --faint: #6b7a89;
+    --dim: #4b5866;
+
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    --measure: 62ch;
+    --rail: 84px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------------------------------------------------------------- the rail */
+  /*
+   * The depth gauge. Fixed, full height, filling as the page scrolls — the same
+   * instrument the game puts across the top of the screen, stood on its end.
+   */
+  .gauge {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--rail);
+    border-right: 1px solid var(--edge);
+    background: linear-gradient(180deg, var(--surface), var(--ground));
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 0;
+  }
+  .gauge__track {
+    position: relative;
+    flex: 1;
+    width: 3px;
+    margin: 18px 0;
+    background: var(--edge);
+    border-radius: 2px;
+    overflow: visible;
+  }
+  .gauge__fill {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 0%;
+    background: linear-gradient(180deg, var(--air), #2f8f88);
+    border-radius: 2px;
+  }
+  .gauge__head {
+    position: absolute;
+    left: 50%;
+    top: 0%;
+    width: 11px; height: 11px;
+    margin-left: -5.5px; margin-top: -5.5px;
+    background: var(--air);
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(95, 217, 207, 0.8);
+  }
+  .gauge__tick {
+    position: absolute;
+    left: -22px;
+    width: 48px;
+    height: 1px;
+    background: var(--edge-lit);
+  }
+  .gauge__tick span {
+    position: absolute;
+    left: 54px;
+    top: -0.62em;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+  .gauge__cap {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--dim);
+    writing-mode: vertical-rl;
+  }
+  .gauge__depth {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--air);
+    font-variant-numeric: tabular-nums;
+    writing-mode: vertical-rl;
+  }
+
+  /* --------------------------------------------------------------- structure */
+  main { margin-left: var(--rail); }
+
+  section {
+    padding: 108px 40px;
+    border-bottom: 1px solid var(--edge);
+    scroll-margin-top: 0;
+  }
+  .wrap { max-width: var(--measure); margin: 0 auto; }
+  .wrap--wide { max-width: 1000px; margin: 0 auto; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--air);
+    margin: 0 0 20px;
+  }
+  .eyebrow--brass { color: var(--brass); }
+  .eyebrow--warn { color: var(--warn); }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(38px, 7vw, 76px);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0 0 28px;
+  }
+  h2 {
+    font-family: var(--mono);
+    font-size: clamp(26px, 3.4vw, 38px);
+    font-weight: 800;
+    line-height: 1.14;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0 0 24px;
+  }
+  h3 {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin: 0 0 8px;
+    color: var(--text);
+  }
+  p { margin: 0 0 20px; color: var(--muted); }
+  p.lead { font-size: 21px; line-height: 1.55; color: var(--text); }
+  strong { color: var(--text); font-weight: 650; }
+  em { color: var(--air); font-style: normal; }
+
+  /* ------------------------------------------------------------------- hero */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+  .hero__grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 64px;
+    align-items: center;
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .hero__sub {
+    font-size: 20px;
+    line-height: 1.55;
+    color: var(--muted);
+    max-width: 46ch;
+    margin: 0 0 34px;
+  }
+  .hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .hero__meta a { color: var(--air); text-decoration: none; border-bottom: 1px solid rgba(95,217,207,0.35); }
+  .hero__meta a:hover { border-bottom-color: var(--air); }
+
+  /*
+   * The dial. The single most characteristic object in the game — it sits at the
+   * top of the screen for every second of every run — so it opens the page as
+   * the thesis rather than as an ornament.
+   */
+  .dial { display: block; }
+  .dial__ring { fill: none; stroke: var(--edge-lit); stroke-width: 2; }
+  .dial__arc {
+    fill: none;
+    stroke: var(--air);
+    stroke-width: 5;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 110px 110px;
+    stroke-dasharray: 578;
+    stroke-dashoffset: 578;
+    animation: sweep 2.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
+  }
+  @keyframes sweep { to { stroke-dashoffset: 92; } }
+  .dial__tick { stroke: var(--edge-lit); stroke-width: 2; }
+  .dial__num {
+    font-family: var(--mono);
+    font-size: 46px;
+    font-weight: 800;
+    fill: var(--text);
+    text-anchor: middle;
+    font-variant-numeric: tabular-nums;
+  }
+  .dial__label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    fill: var(--dim);
+    text-anchor: middle;
+  }
+
+  /* ------------------------------------------------------------------ pieces */
+  .rule {
+    height: 1px;
+    background: var(--edge);
+    margin: 40px 0;
+    border: 0;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1px;
+    background: var(--edge);
+    border: 1px solid var(--edge);
+    margin: 36px 0 0;
+  }
+  .card { background: var(--surface); padding: 24px; }
+  .card p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--faint); }
+
+  /* The five environments, as a descent rather than a row of equal boxes. */
+  .envs { display: flex; flex-direction: column; gap: 1px; background: var(--edge); border: 1px solid var(--edge); margin-top: 36px; }
+  .env {
+    background: var(--surface);
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 20px;
+    padding: 20px 24px;
+    align-items: baseline;
+  }
+  .env__n {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .env__name { font-family: var(--mono); font-weight: 700; font-size: 15px; color: var(--text); }
+  .env__what { font-size: 15px; color: var(--faint); margin: 4px 0 0; line-height: 1.5; }
+
+  /* Numbers. Everything here is measured from the repository, not estimated. */
+  .figs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--edge);
+    border: 1px solid var(--edge);
+    margin-top: 36px;
+  }
+  .fig { background: var(--surface); padding: 22px 20px; }
+  .fig__n {
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--brass);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .fig__l {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-top: 10px;
+    display: block;
+  }
+
+  /* The anti-cheat flow. A diagram because the sequence IS the argument. */
+  .flow {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin: 36px 0 0;
+    border: 1px solid var(--edge);
+  }
+  .flow__step {
+    background: var(--surface);
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 18px;
+    align-items: start;
+    border-bottom: 1px solid var(--edge);
+  }
+  .flow__step:last-child { border-bottom: 0; }
+  .flow__n {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--air);
+    padding-top: 3px;
+    font-variant-numeric: tabular-nums;
+  }
+  .flow__step p { margin: 4px 0 0; font-size: 15px; color: var(--faint); }
+  .flow__step--out { background: #0d1a19; }
+  .flow__step--out .flow__n { color: var(--brass); }
+
+  .quote {
+    border-left: 2px solid var(--air);
+    padding: 4px 0 4px 24px;
+    margin: 36px 0;
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  /* The honest list. Deliberately styled as plainly as everything else — the
+     point is that it is not hidden, so it should not look apologetic either. */
+  .honest { list-style: none; padding: 0; margin: 32px 0 0; }
+  .honest li {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 20px;
+    padding: 14px 0;
+    border-top: 1px solid var(--edge);
+    align-items: baseline;
+  }
+  .honest li:last-child { border-bottom: 1px solid var(--edge); }
+  .honest__tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--warn);
+  }
+  .honest__tag--soon { color: var(--brass); }
+  .honest p { margin: 0; font-size: 15px; color: var(--faint); }
+
+  .next { list-style: none; padding: 0; margin: 32px 0 0; display: flex; flex-direction: column; gap: 1px; background: var(--edge); border: 1px solid var(--edge); }
+  .next li { background: var(--surface); padding: 20px 24px; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: baseline; }
+  .next h3 { margin: 0 0 6px; }
+  .next p { margin: 0; font-size: 15px; color: var(--faint); }
+  .next__when {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+
+  .close { text-align: left; }
+  .close h2 { margin-bottom: 28px; }
+  .cta {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ground);
+    background: var(--air);
+    padding: 14px 26px;
+    text-decoration: none;
+    margin-top: 12px;
+  }
+  .cta:hover { background: #7ee9e0; }
+  .cta:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  footer {
+    padding: 40px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  @media (max-width: 760px) {
+    :root { --rail: 52px; }
+    section { padding: 72px 22px; }
+    .hero__grid { grid-template-columns: 1fr; gap: 40px; }
+    .dial { max-width: 180px; }
+    .gauge__tick span { display: none; }
+    .honest li { grid-template-columns: 1fr; gap: 4px; }
+    .next li { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dial__arc { animation: none; stroke-dashoffset: 92; }
+    * { scroll-behavior: auto !important; }
+  }
+</style>
+
+<!-- The gauge. Filled by scroll position; see the script at the end. -->
+<div class="gauge" aria-hidden="true">
+  <span class="gauge__cap">Surface</span>
+  <div class="gauge__track">
+    <div class="gauge__fill" id="fill"></div>
+    <div class="gauge__head" id="head"></div>
+    <div class="gauge__tick" style="top: 18%"><span>Parkour</span></div>
+    <div class="gauge__tick" style="top: 34%"><span>Poison</span></div>
+    <div class="gauge__tick" style="top: 50%"><span>Water</span></div>
+    <div class="gauge__tick" style="top: 66%"><span>Rock</span></div>
+    <div class="gauge__tick" style="top: 82%"><span>Fire</span></div>
+  </div>
+  <span class="gauge__depth" id="depth">0m</span>
+</div>
+
+<main>
+  <!-- ==================================================== the thesis -->
+  <section class="hero">
+    <div class="hero__grid">
+      <div>
+        <p class="eyebrow">Air Debt &nbsp;·&nbsp; playable now</p>
+        <h1>Thirty seconds of air.</h1>
+        <p class="hero__sub">
+          A browser action-roguelite where the run timer is the oxygen in your
+          mask. You go down, you take what you can carry, and you come back
+          before it runs out — because if it doesn't, you become one of them.
+        </p>
+        <div class="hero__meta">
+          <span>Live &nbsp;<a href="https://air-debt-game.vercel.app">air-debt-game.vercel.app</a></span>
+          <span>Built by one person</span>
+          <span>Web · Next.js · Postgres</span>
+        </div>
+      </div>
+
+      <svg class="dial" width="220" height="220" viewBox="0 0 220 220" role="img" aria-label="An oxygen dial reading eight seconds remaining.">
+        <circle class="dial__ring" cx="110" cy="110" r="92" />
+        <circle class="dial__arc" cx="110" cy="110" r="92" />
+        <g class="dial__tick">
+          <line x1="110" y1="10" x2="110" y2="24" />
+          <line x1="210" y1="110" x2="196" y2="110" />
+          <line x1="110" y1="210" x2="110" y2="196" />
+          <line x1="10" y1="110" x2="24" y2="110" />
+        </g>
+        <text class="dial__num" x="110" y="118">8</text>
+        <text class="dial__label" x="110" y="146">SECONDS</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ==================================================== the loop -->
+  <section>
+    <div class="wrap">
+      <p class="eyebrow">The loop</p>
+      <h2>Every second you spend down there is a second you need to get back.</h2>
+      <p class="lead">
+        Most games with a timer use it to hurry you. This one uses it to make you
+        <em>wrong</em>. The air is the only resource, and it is spent on
+        everything at once: the fight, the chest, and the walk home.
+      </p>
+      <p>
+        So the game is not really about combat. It is about a decision you make
+        with a number in the corner of your eye — <strong>I have eleven seconds,
+        and the shaft is four seconds behind me, so this chest is not mine.</strong>
+        Getting that decision wrong is how you lose, and it is the most
+        interesting thing a player does.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <h3>Go down</h3>
+          <p>Five environments, fixed geometry, reshuffled encounters. Deeper stone is worth more.</p>
+        </div>
+        <div class="card">
+          <h3>Take what you can</h3>
+          <p>Gems and gold out of chests and monsters. Everything is carried, nothing is banked.</p>
+        </div>
+        <div class="card">
+          <h3>Get out</h3>
+          <p>Any exit banks the whole bag. Dying or suffocating loses all of it — and only it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================== why the maths works -->
+  <section>
+    <div class="wrap">
+      <p class="eyebrow">The design</p>
+      <h2>The biggest tank you can buy is deliberately not enough.</h2>
+      <p>
+        Thirty seconds to start. Ten upgrades take it to five and a half minutes,
+        and five and a half minutes still will not walk the whole dungeon and
+        beat the boss. That is not a balance problem — it is the point.
+      </p>
+      <p>
+        Closing the gap needs <strong>shortcuts</strong>, and a shortcut only
+        opens from a lever placed <em>past</em> the ground it skips. So progress
+        cannot be bought, cannot be rushed, and cannot be learned from a
+        walkthrough video: you have to have been there.
+      </p>
+      <blockquote class="quote">
+        Money never buys more than the last 30% of anything. Gold covers a gem
+        shortfall only once you already hold 70% of what a purchase needs,
+        measured per grade — so no amount of grinding the easy ground
+        substitutes for going deep.
+      </blockquote>
+    </div>
+  </section>
+
+  <!-- ==================================================== the five -->
+  <section>
+    <div class="wrap">
+      <p class="eyebrow">Five environments</p>
+      <h2>Hardest last, and each one takes something away from you.</h2>
+      <div class="envs">
+        <div class="env">
+          <span class="env__n">01</span>
+          <div>
+            <span class="env__name">Parkour</span>
+            <p class="env__what">No monsters at all. It teaches you to move, and it is the only place that is quiet.</p>
+          </div>
+        </div>
+        <div class="env">
+          <span class="env__n">02</span>
+          <div>
+            <span class="env__name">Poison</span>
+            <p class="env__what">Green fire and things that chase. It teaches you to read a room before entering it.</p>
+          </div>
+        </div>
+        <div class="env">
+          <span class="env__n">03</span>
+          <div>
+            <span class="env__name">Water</span>
+            <p class="env__what">A flooded cave modelled on a real one. It takes the floor away, and gives you a second clock: five breaths.</p>
+          </div>
+        </div>
+        <div class="env">
+          <span class="env__n">04</span>
+          <div>
+            <span class="env__name">Rock</span>
+            <p class="env__what">Something stands in the doorway with two archers strapped to its shoulders, and will not let you slide past.</p>
+          </div>
+        </div>
+        <div class="env">
+          <span class="env__n">05</span>
+          <div>
+            <span class="env__name">Fire</span>
+            <p class="env__what">Where the clock finally beats you. At the bottom: a boss built from your own move set, with the one move it cannot answer left out of its own.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================== the safety story -->
+  <section>
+    <div class="wrap">
+      <p class="eyebrow eyebrow--brass">Safety</p>
+      <h2>A score is never sent to us. The keystrokes are.</h2>
+      <p class="lead">
+        Leaderboards and an in-game economy are the two things players cheat,
+        and the two things an investor should ask about first. Here is the whole
+        mechanism.
+      </p>
+      <div class="flow">
+        <div class="flow__step">
+          <span class="flow__n">01</span>
+          <div>
+            <h3>The server opens the run</h3>
+            <p>It issues the seed — which decides the entire layout — and writes down the tank and the equipment before a single frame is played. The browser chooses none of it.</p>
+          </div>
+        </div>
+        <div class="flow__step">
+          <span class="flow__n">02</span>
+          <div>
+            <h3>You play. The game records the keys.</h3>
+            <p>Not positions, not scores — which keys were held on which tick. The simulation is a deterministic function of exactly that.</p>
+          </div>
+        </div>
+        <div class="flow__step">
+          <span class="flow__n">03</span>
+          <div>
+            <h3>The server replays it</h3>
+            <p>Through the same code, from the conditions it wrote down itself, and works out what happened — the loot, the time, the death.</p>
+          </div>
+        </div>
+        <div class="flow__step flow__step--out">
+          <span class="flow__n">04</span>
+          <div>
+            <h3>The result is credited from the replay</h3>
+            <p>Both the leaderboard score and the loot. There is no request anywhere in the game that adds to a balance by asking.</p>
+          </div>
+        </div>
+      </div>
+      <blockquote class="quote">
+        To cheat, you would have to submit keystrokes that genuinely produce the
+        score. That is not cheating. That is playing.
+      </blockquote>
+      <p>
+        This is why the simulation was built as a pure reducer at a fixed sixty
+        ticks a second before anything else was built at all. Determinism was not
+        an engineering preference — it is the thing that makes an honest
+        leaderboard and a sellable economy possible later.
+      </p>
+    </div>
+  </section>
+
+  <!-- ==================================================== what exists -->
+  <section>
+    <div class="wrap-wide wrap">
+      <p class="eyebrow">Where it is</p>
+      <h2>All of this is running, today, at a public address.</h2>
+      <p>
+        Not a prototype and not a slide. Accounts, five environments, a boss, a
+        shop, a tutorial that teaches itself, and two replay-verified
+        leaderboards.
+      </p>
+      <div class="figs">
+        <div class="fig"><span class="fig__n">5</span><span class="fig__l">Environments</span></div>
+        <div class="fig"><span class="fig__n">12</span><span class="fig__l">Enemy types</span></div>
+        <div class="fig"><span class="fig__n">30</span><span class="fig__l">Shop items</span></div>
+        <div class="fig"><span class="fig__n">292</span><span class="fig__l">Simulation tests</span></div>
+        <div class="fig"><span class="fig__n">16</span><span class="fig__l">Browser tests</span></div>
+        <div class="fig"><span class="fig__n">168</span><span class="fig__l">Art frames, generated</span></div>
+      </div>
+      <hr class="rule" />
+      <p>
+        <strong>The art is generated, not licensed.</strong> Every sprite comes
+        out of fourteen Python scripts checked in beside their output, so there
+        is no asset bill and no licence to honour. The sound is the same idea:
+        every noise is synthesised the moment it plays. There is not one audio
+        file in the project.
+      </p>
+      <p>
+        <strong>Infrastructure costs effectively nothing.</strong> Stateless
+        serverless and managed Postgres, with no always-on process — chosen at
+        the architecture stage so it stays true as players arrive.
+      </p>
+    </div>
+  </section>
+
+  <!-- ==================================================== the honest slide -->
+  <section>
+    <div class="wrap">
+      <p class="eyebrow eyebrow--warn">What it is not</p>
+      <h2>The missing pieces, before you ask.</h2>
+      <p>
+        A founder who knows what is not built is easier to back than one who
+        does not. This list is also in the public repository, where it has to
+        stay true.
+      </p>
+      <ul class="honest">
+        <li>
+          <span class="honest__tag">Not built</span>
+          <p><strong>Monetisation.</strong> No payment provider, no checkout. The economy it would sell into is finished and server-owned — which had to be right first, because selling currency on top of an economy the client can write is selling something you do not control.</p>
+        </li>
+        <li>
+          <span class="honest__tag">Not built</span>
+          <p><strong>PvP and Survival.</strong> Both are on the menu and marked as coming, so a player can see the shape of the game. Nothing is behind either.</p>
+        </li>
+        <li>
+          <span class="honest__tag">Not built</span>
+          <p><strong>Mobile.</strong> Keyboard only. Web first as validation, native app after — but that is a plan, not a build.</p>
+        </li>
+        <li>
+          <span class="honest__tag honest__tag--soon">Early</span>
+          <p><strong>Players.</strong> It went live this week. The numbers on the boards are real runs, and there are not many of them yet.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================================================== what is next -->
+  <section>
+    <div class="wrap">
+      <p class="eyebrow">What is next</p>
+      <h2>In this order, and for this reason.</h2>
+      <ul class="next">
+        <li>
+          <div>
+            <h3>1v1</h3>
+            <p>Two scavengers, one tank of air, the same dungeon. The extraction decision becomes a decision about another person.</p>
+          </div>
+          <span class="next__when">Next</span>
+        </li>
+        <li>
+          <div>
+            <h3>Monetisation</h3>
+            <p>Cosmetics and convenience on top of an economy that is already server-authoritative. Deliberately after the economy was made honest, not before.</p>
+          </div>
+          <span class="next__when">After 1v1</span>
+        </li>
+        <li>
+          <div>
+            <h3>Survival, in 3D</h3>
+            <p>Hold a map against waves, ranked. A different game sharing the same spine.</p>
+          </div>
+          <span class="next__when">Later</span>
+        </li>
+        <li>
+          <div>
+            <h3>Native mobile</h3>
+            <p>The end goal. The web build is the validation stage, and the simulation already runs anywhere that has a clock.</p>
+          </div>
+          <span class="next__when">Later</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================================================== the ask -->
+  <section class="close">
+    <div class="wrap">
+      <p class="eyebrow">Why partner</p>
+      <h2>One person built a deterministic action game with an economy that cannot be edited from a browser console, and it is live.</h2>
+      <p class="lead">
+        The hard part is done, and it is the part that is usually skipped. Most
+        games reach a playable build with a client-trusted economy and discover
+        the problem when money is involved. This one solved it first, which is
+        why the next three things on the list are additions rather than rewrites.
+      </p>
+      <p>
+        What money buys is time and reach: finishing 1v1, standing up payments
+        properly, and putting it in front of players. Everything the product
+        needs in order to charge for something is already true.
+      </p>
+      <a class="cta" href="https://air-debt-game.vercel.app">Play it now →</a>
+      <p style="margin-top:28px;font-size:15px;">
+        Start with the tutorial. It takes five minutes, nothing in it can kill
+        you, and it teaches itself — every station is a piece of geometry you
+        cannot pass without learning the move it is there to teach.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    Air Debt · <a href="https://air-debt-game.vercel.app" style="color:var(--air);text-decoration:none;">air-debt-game.vercel.app</a>
+  </footer>
+</main>
+
+<script>
+  /*
+   * The gauge follows the scroll, and the depth counts with it.
+   *
+   * The number is theatre and the metre marks are the game's, not a measurement
+   * of the page — but the fill is honest: it is exactly how far down you are.
+   */
+  (function () {
+    var fill = document.getElementById("fill");
+    var head = document.getElementById("head");
+    var depth = document.getElementById("depth");
+    var DEEPEST = 51654; // The deepest metre the game's own depth bar shows.
+    var ticking = false;
+
+    function update() {
+      var max = document.body.scrollHeight - window.innerHeight;
+      var p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      fill.style.height = p * 100 + "%";
+      head.style.top = p * 100 + "%";
+      depth.textContent = Math.round(p * DEEPEST).toLocaleString() + "m";
+      ticking = false;
+    }
+
+    window.addEventListener(
+      "scroll",
+      function () {
+        if (!ticking) {
+          ticking = true;
+          window.requestAnimationFrame(update);
+        }
+      },
+      { passive: true }
+    );
+    window.addEventListener("resize", update);
+    update();
+  })();
+</script>
