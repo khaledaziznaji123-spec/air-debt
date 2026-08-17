@@ -37,13 +37,19 @@ test("sixty-eight per cent of the gems is not enough, and that is the 70% rule",
   );
   assert.equal(pay(price, purse), null, "it should not have been payable");
 
-  // One more gem is 71.9%, which is over the line — now the gold may help.
-  const nearly = { gems: [23, 18, 28, 0, 8], gold: 44, legendaries: 0 };
-  assert.equal(
-    afford(price, nearly).affordable,
-    true,
-    "23 of 32 is over 70% and gold covers the rest",
-  );
+  // One more gem is 71.9%, which is over the line: the THRESHOLD stops being
+  // the objection. It is still not affordable, because covering nine gems costs
+  // fifty-four gold and there is forty-four — but that is a different refusal,
+  // and keeping the two apart is the point. One says "go deeper"; the other says
+  // "come back with more gold".
+  const over = afford(price, { gems: [23, 18, 28, 0, 8], gold: 44, legendaries: 0 });
+  assert.equal(over.blockedByThreshold, false, "71.9% should clear the threshold");
+  assert.equal(over.affordable, false, "but the gold is still short");
+  assert.equal(over.goldForGems, 54);
+
+  // And with enough of both, it goes through.
+  const enough = afford(price, { gems: [26, 18, 28, 0, 8], gold: 44, legendaries: 0 });
+  assert.equal(enough.affordable, true, "81% of the gems and gold to spare");
 });
 
 test("an admin pays nothing but still cannot exceed a top tier", () => {
