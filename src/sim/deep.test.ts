@@ -1188,13 +1188,15 @@ test("nothing can shoot up through the fire shortcut", () => {
   );
 });
 
-test("under the surface is swimming, even with both feet on the bed", () => {
-  // Reported from play: "it actually makes you walk under the water if there is
-  // floor instead of always swimming." It did. The stance asked `inWater &&
-  // !onGround`, on the reasoning that feet down is wading — which is right in a
-  // shin-deep pool and quite wrong three metres down, where it had the player
-  // striding along the seabed with the walk animation running and their head
-  // fully under.
+test("there is no standing up in water, at any depth or on any key", () => {
+  // Reported from play twice, and the second report is the one that settled it:
+  // "press down and your character keeps standing, and when you leave the water
+  // while he is standing he keeps trying to jump and cannot, every tick."
+  //
+  // Both earlier attempts left a state where the physics and the animation
+  // disagreed — swim speed under a walk animation, then walking outright in the
+  // shallows. The rule is now the simple one: touch water and the water has you.
+  // Pressing down is a dive rather than a crouch.
   const p = drownedPassage();
   const base = createInitialState(60 * 60 * 20);
   let s: SimState = {
@@ -1215,20 +1217,24 @@ test("under the surface is swimming, even with both feet on the bed", () => {
   for (let i = 0; i < 20; i++) s = step(s, Intent.Right);
   assert.equal(s.player.stance, "swimming");
 
-  // Wading survives: feet down, head OUT, in shallow water is walking.
-  const shallow: SimState = {
-    ...base,
-    entered: true,
-    enemies: [],
-    player: { ...base.player, x: shoreX() + 60, y: FLOOR },
-  };
-  const waded = step(shallow, Intent.Right);
-  if (!submerged(waded.player.x, waded.player.y, tuning.player.height)) {
-    assert.notEqual(
-      waded.player.stance,
-      "swimming",
-      "a head above water is not a swim",
-    );
+  // And no key produces a stand. Crouch is the one that was reported, but the
+  // whole set is worth walking because any of them coming out as "grounded" is
+  // the same bug wearing a different button.
+  for (const held of [
+    Intent.Crouch,
+    Intent.Crouch | Intent.Right,
+    Intent.None,
+    Intent.Slide | Intent.Right,
+    Intent.Jump | Intent.Crouch,
+  ]) {
+    const after = step(s, held);
+    if (waterAt(after.player.x, after.player.y, tuning.player.height)) {
+      assert.equal(
+        after.player.stance,
+        "swimming",
+        `holding ${held} in water produced "${after.player.stance}"`,
+      );
+    }
   }
 });
 

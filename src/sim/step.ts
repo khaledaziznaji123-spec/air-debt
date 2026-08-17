@@ -2108,15 +2108,15 @@ export function step(state: SimState, intents: Intents): SimState {
   }
 
   /**
-   * Whether the head is under, decided BEFORE the dash so the dash can be
-   * refused.
+   * Whether the body is in water at all, decided BEFORE the dash so the dash
+   * can be refused.
    *
-   * `submerged` rather than "is there water here": wading through a shallow pool
-   * with your head out is still walking and a slide through it is still a slide.
-   * What has to be stopped is the move happening when there is no ground under
-   * you and no air above you.
+   * Any contact, not just a submerged head. A slide is a body skidding on a
+   * surface and a backstep is a push off one; neither is available at the
+   * shoreline any more than it is on the bottom, and allowing it in the shallows
+   * put back the same mixed state — a dash animation with the water steering.
    */
-  const headUnder = submerged(prev.x, prev.y, BODY.height);
+  const headUnder = waterAt(prev.x, prev.y, BODY.height) !== null;
 
   // Slide / backstep — context-sensitive (FR-5.2), and cancels a swing (FR-5.10).
   //
@@ -2355,22 +2355,25 @@ export function step(state: SimState, intents: Intents): SimState {
   // not steering it" — the wall jump and the vent both use it — so the water
   // yields to it for exactly as long as it lasts.
   /**
-   * Standing on something with your head out is WADING, and wading is walking.
+   * IN THE WATER IS SWIMMING. There is no wading and no standing.
    *
-   * The swim block used to run for any contact with water at all, while the
-   * stance only said "swimming" once the head went under — so the shallows were
-   * a state with swim physics and a walk animation. You moved at a kick instead
-   * of a stride, your vertical control belonged to the water, and the sprite
-   * walked through all of it. Reported, accurately, as lagging and as the swim
-   * animation not being there.
+   * This went through two wrong versions before landing here, and both were the
+   * same mistake in different clothes: a state where the physics and the
+   * animation disagreed about what the player was doing.
    *
-   * Now the two agree. Feet on something and head above the line: ordinary
-   * walking, ordinary animation. Anything else in water: the swim block owns it
-   * and the stance says so.
+   * First the swim block ran for any contact with water while the stance only
+   * said "swimming" once the head went under — so the shallows had swim physics
+   * under a walk animation. Then the exception was widened so feet-down-head-out
+   * was walking outright, which fixed the speed and left the real complaint
+   * untouched: press down in water and the character STANDS, then leaving the
+   * water he tries to jump every tick and cannot.
+   *
+   * So: no exception at all. Touch water and the water has you — one set of
+   * physics, one animation, and pressing down is a dive rather than a crouch.
+   * A shoreline you swim the last two feet of is a much smaller wrong than a
+   * swimmer standing up in the sea.
    */
-  const wading = grounded && !submerged(x, y, BODY.height);
-
-  if (inWater && wallLaunch <= 0 && !wading) {
+  if (inWater && wallLaunch <= 0) {
     const wantsUpNow = wantsUp;
     const wasIn = waterAt(prev.x, prev.y, BODY.height) !== null;
     if (!wasIn) {
@@ -2617,17 +2620,15 @@ export function step(state: SimState, intents: Intents): SimState {
       ? vx * facing > 0
         ? "sliding"
         : "backstepping"
-      : // Swimming outranks airborne and loses to a dash.
+      : // IN WATER IS SWIMMING, whatever the feet are doing and whatever is
+        // being held. Not "in water and off the bottom", not "in water and
+        // submerged" — in water. Both of the narrower versions left a state
+        // where the player stood up in the sea, and standing in the sea is the
+        // thing being fixed.
         //
-        // UNDER THE SURFACE IS ALWAYS SWIMMING, even with both feet planted on
-        // the bed. This used to be `inWater && !onGround`, on the reasoning that
-        // feet down is wading — which is right in a shin-deep pool and quite
-        // wrong three metres down, where it had the player striding along the
-        // seabed with the walk animation playing and their head fully under.
-        //
-        // Wading survives, because it is the same test read the other way: feet
-        // down and head OUT is not submerged, so it still comes out as walking.
-        inWater && (!onGround || submerged(x, y, BODY.height))
+        // It sits above the crouch and the ground checks below deliberately, so
+        // pressing down in water is a dive rather than a crouch.
+        inWater
         ? "swimming"
         : climbing
           ? "climbing"
