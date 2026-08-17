@@ -23,7 +23,7 @@ test("sixty-eight per cent of the gems is not enough, and that is the 70% rule",
   // against a price of thirty-two is 68.75%, and gold may only cover a shortfall
   // from 70% up. So the refusal was correct and the game was right to say no.
   const price = priceOf(tank, 0)!;
-  const purse = { gems: [22, 18, 28, 0, 8], gold: 44, legendaries: 0 };
+  const purse = { gems: [22, 18, 28, 0, 8], gold: 44 };
   const verdict = afford(price, purse);
   assert.equal(
     verdict.affordable,
@@ -42,13 +42,13 @@ test("sixty-eight per cent of the gems is not enough, and that is the 70% rule",
   // fifty-four gold and there is forty-four — but that is a different refusal,
   // and keeping the two apart is the point. One says "go deeper"; the other says
   // "come back with more gold".
-  const over = afford(price, { gems: [23, 18, 28, 0, 8], gold: 44, legendaries: 0 });
+  const over = afford(price, { gems: [23, 18, 28, 0, 8], gold: 44 });
   assert.equal(over.blockedByThreshold, false, "71.9% should clear the threshold");
   assert.equal(over.affordable, false, "but the gold is still short");
   assert.equal(over.goldForGems, 54);
 
   // And with enough of both, it goes through.
-  const enough = afford(price, { gems: [26, 18, 28, 0, 8], gold: 44, legendaries: 0 });
+  const enough = afford(price, { gems: [26, 18, 28, 0, 8], gold: 44 });
   assert.equal(enough.affordable, true, "81% of the gems and gold to spare");
 });
 
