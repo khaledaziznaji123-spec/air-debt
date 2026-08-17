@@ -19,25 +19,57 @@ import { useAuthLinkLanding } from "./link-landing.ts";
  * game's rule rather than a slogan.
  */
 
-/** The captures, and the one thing each is there to show. */
+/**
+ * The captures, and the one thing each is there to show.
+ *
+ * The copy here described an older game — "rock, then fire", back when those
+ * were the first two environments. They are the fourth and fifth now, and the
+ * order is deliberate: parkour teaches you to move, poison teaches you to read
+ * a room, water takes the floor away, rock puts something in a doorway, and
+ * fire is where the clock finally beats you. Saying "rock then fire" sold two
+ * environments out of five and the two least interesting.
+ */
 const SHOTS = [
   {
     src: "/shots/rock.png",
-    alt: "The first environment: the player facing two goblins with an archer on a ledge above, a chest beside them, and the air clock running down at the top of the screen.",
+    alt: "Inside the dungeon: the player facing two goblins with an archer on a ledge above, a chest beside them, and the air clock running down at the top of the screen.",
     title: "Thirty seconds",
-    line: "The clock is the whole game. Every fight, every chest and every step back out is spent from the same tank.",
+    line: "The clock is the whole game. Every fight, every chest and every step back out is spent from the same tank — and the biggest tank you can buy still is not enough to walk the whole way. Shortcuts are the only way the maths works.",
   },
   {
     src: "/shots/fire.png",
-    alt: "The second environment: a mini-boss holding a doorway, a curtain of lava pouring from the ceiling, and a flamethrower enemy further in.",
-    title: "Five environments",
-    line: "Rock, then fire. Something is standing on the way out of each one, and it will not let you slide past.",
+    alt: "The fire environment: a mini-boss holding a doorway, a curtain of lava pouring from the ceiling, and a flamethrower enemy further in.",
+    title: "Five environments, hardest last",
+    line: "Parkour, poison, water, rock, fire. Something is standing in the way out of each one and it will not let you slide past. At the bottom is a boss built from your own move set, with the one move it cannot answer left out of its own.",
   },
   {
     src: "/shots/shop.png",
     alt: "The shop, showing weapons with gem prices, upgrade levels and short descriptions.",
     title: "What you carry back",
-    line: "Gems come out of the dark and turn into reach, air and armour. Die down there and they stay down there.",
+    line: "Gems come out of the dark and turn into reach, air and armour. Walk out and it is yours. Die down there and it stays down there — that decision, made with the clock running, is the game.",
+  },
+];
+
+/**
+ * The part that is worth saying out loud to somebody who builds things.
+ *
+ * Every line here is a fact about the build rather than a claim about the
+ * future, and each one is checkable — which is the point. "Server-verified" is
+ * the kind of phrase that usually means nothing; here it means the server
+ * re-simulates the run.
+ */
+const FACTS = [
+  {
+    title: "Deterministic simulation",
+    line: "The game is a pure reducer at a fixed sixty ticks a second, with PixiJS as a view layer over the top. Nothing about how the game plays lives in the renderer.",
+  },
+  {
+    title: "Leaderboards you cannot fake",
+    line: "A score is never submitted. The keystrokes are, and the server replays them through the same reducer from a seed it issued before the run started. Forging a score means forging a run.",
+  },
+  {
+    title: "Nothing is client-written",
+    line: "No request in the game adds to a balance by asking. Loot is credited from the replay, so the economy cannot be edited from a browser console.",
   },
 ];
 
@@ -73,7 +105,8 @@ export default function Landing() {
           <Gate />
 
           <p className="mt-8 font-mono text-xs tracking-widest text-[#5a6875]">
-            KEYBOARD ONLY · A D TO MOVE · W JUMP · Q SWING · R PARRY
+            KEYBOARD ONLY · A D MOVE · SPACE JUMP · SHIFT SLIDE · Q SWING · R
+            PARRY · L STUN
           </p>
         </div>
       </section>
@@ -104,6 +137,27 @@ export default function Landing() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* ------------------------------------------------------------ facts */}
+      <section className="border-t border-white/5 bg-white/[0.02]">
+        <div className="mx-auto max-w-5xl px-6 py-16">
+          <h2 className="font-mono text-sm tracking-[0.25em] text-[#5fd9cf]">
+            UNDER IT
+          </h2>
+          <ul className="mt-8 grid gap-8 sm:grid-cols-3">
+            {FACTS.map((fact) => (
+              <li key={fact.title} className="flex flex-col gap-2">
+                <h3 className="text-balance font-semibold text-[#e7ecf2]">
+                  {fact.title}
+                </h3>
+                <p className="text-pretty text-sm leading-relaxed text-[#9fb0c0]">
+                  {fact.line}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       {/* ------------------------------------------------------------- foot */}
