@@ -16,7 +16,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   createInitialState,
   step,
-  Intent,
   totalGems,
   type SimState,
   type InputRecord,
@@ -51,33 +50,6 @@ import {
 
 const MS_PER_TICK = 1000 / TICK_HZ;
 
-/**
- * The on-screen control bar.
- *
- * It was scaffolding while there was no tutorial. There is one now, so it is
- * kept for the other reason: it makes input VISIBLE. A key that lights up
- * proves the game registered the press, which is the difference between "this
- * move is broken" and "I am pressing it wrong" — and that distinction is worth
- * more here than anywhere, because the two moves on the slide key are told
- * apart by whether a direction is held.
- */
-const CONTROLS = [
-  { key: "A", label: "Left", flag: Intent.Left },
-  { key: "D", label: "Right", flag: Intent.Right },
-  { key: "W", label: "Jump", flag: Intent.Jump },
-  { key: "S", label: "Crouch", flag: Intent.Crouch },
-  { key: "F", label: "Slide", flag: Intent.Slide },
-  { key: "Q", label: "Attack", flag: Intent.Attack },
-  { key: "R", label: "Block / Parry", flag: Intent.Block, emphasis: true },
-  { key: "L", label: "Stun", flag: Intent.Stun },
-  { key: "E", label: "Lever / Door", flag: Intent.Interact, emphasis: true },
-  { key: "1", label: "Restoration", flag: Intent.Restoration },
-  { key: "2", label: "Breath", flag: Intent.Breath },
-  { key: "3", label: "Quickstep", flag: Intent.Haste },
-  { key: "4", label: "Etched", flag: Intent.Venom },
-  { key: "5", label: "Milk", flag: Intent.Milk },
-  { key: "6", label: "Ward", flag: Intent.Shield },
-] as const;
 /** Never simulate more than this in one frame — a backgrounded tab must not
  *  come back and run thousands of ticks at once. */
 const MAX_CATCHUP_TICKS = 8;
@@ -135,7 +107,15 @@ export default function Game({
    * which is where the player is looking. The toggle stays: it is how the art
    * size mismatch and more than one collision bug were caught.
    */
-  const [debug, setDebug] = useState(false);
+  /**
+   * The renderer's development readout — tick counts, velocities, the sprite
+   * manifest check.
+   *
+   * A constant rather than state now that the checkbox under the canvas is gone.
+   * It stays because it is how more than one collision bug and the art size
+   * mismatch were found; flip it here when something needs looking at.
+   */
+  const debug = false;
   /**
    * Developer mode, from Settings. See `src/app/admin.ts`.
    *
@@ -186,7 +166,7 @@ export default function Game({
     return () => clearTimeout(t);
   }, [backToBoard, router]);
   const [renderError, setRenderError] = useState<string | null>(null);
-  const [heldIntents, setHeldIntents] = useState(0);
+
   /**
    * The shop is not a page — it is an overlay over the lobby, because it spends
    * the same session bank a run banks into. The home screen's Shop corner
@@ -471,10 +451,11 @@ export default function Game({
           // In the hub the character stands still: input is ignored until the
           // run is actually started.
           const intents = inLobbyRef.current ? 0 : input.read();
+          // Recorded only on CHANGE, which is also the shape the replay expects:
+          // a gap in the log means "still holding the same keys". A full entry
+          // per tick would be seventy-two thousand of them for a long run.
           if (intents !== state.previousIntents) {
             log.push({ tick: state.tick, intents });
-            // Only on change — this would otherwise be 60 renders a second.
-            setHeldIntents(intents);
           }
           previous = state;
           state = step(state, intents);
@@ -1013,45 +994,15 @@ export default function Game({
         )}
       </div>
 
-      <div className="flex w-full max-w-[1280px] flex-wrap items-center justify-center gap-2">
-        {CONTROLS.map(({ key, label, flag, ...rest }) => {
-          const active = (heldIntents & flag) !== 0;
-          const emphasis = "emphasis" in rest && rest.emphasis;
-          return (
-            <div
-              key={key}
-              className={[
-                "flex min-w-[92px] flex-col items-center gap-1 rounded-lg border px-3 py-2 transition-colors duration-75",
-                active
-                  ? "border-[#4ecdc4] bg-[#4ecdc4] text-[#0b0e14]"
-                  : emphasis
-                    ? "border-[#4ecdc4]/60 bg-[#4ecdc4]/10 text-[#e8edf5]"
-                    : "border-white/10 bg-white/5 text-[#8a94a6]",
-              ].join(" ")}
-            >
-              <kbd className="font-mono text-sm font-bold">{key}</kbd>
-              <span className="text-[10px] tracking-wide uppercase">
-                {label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex w-full max-w-[1280px] items-center justify-between text-xs text-[#8a94a6]">
-        <p>
-          Press <span className="font-bold text-[#4ecdc4]">R</span> the moment a
-          goblin&apos;s swing lands — not when its wind-up bar starts.
-        </p>
-        <label className="flex cursor-pointer items-center gap-2 select-none">
-          <input
-            type="checkbox"
-            checked={debug}
-            onChange={(e) => setDebug(e.target.checked)}
-          />
-          debug overlay
-        </label>
-      </div>
+      {/* NOTHING UNDER THE CANVAS.
+          There used to be a key legend, a line of parry coaching and a debug
+          checkbox down here. The legend was scaffolding from before there was a
+          tutorial, and the tutorial teaches the controls properly now by making
+          you use them — so what the row actually did was give the page something
+          to scroll to, and put three rows of chrome under the game in every
+          screenshot and every demo. The debug overlay is still there for anyone
+          who wants it; it is a renderer toggle rather than a thing to hang off
+          the page. */}
     </div>
   );
 }
