@@ -394,7 +394,12 @@ export default function Game({
     let state = createInitialState(opened?.air ?? startingAir(), {
       seed: opened?.seed,
       openShortcuts: leveredRef.current,
-      god: adminRef.current,
+      // The SERVER's verdict where there is one. Admin is a column now rather
+      // than a browser setting, because an invincible run can rank — so the run
+      // being played has to match the run that will be replayed, or an honest
+      // admin run gets scored as the death it never had. The local toggle still
+      // drives a practice run that nothing is riding on.
+      god: opened ? opened.admin : adminRef.current,
       loadout: loadoutRef.current,
       tutorial,
     });
@@ -576,7 +581,7 @@ export default function Game({
           // told to the player unless it fails in a way they can act on.
           const open = runRef.current;
           runRef.current = null;
-          if (open && !tutorial && !adminRef.current) {
+          if (open && !tutorial) {
             // Hand in the log. This is now the ONLY way loot reaches the
             // account, so the reply is worth reading: it carries the credited
             // balances back and `closeRun` writes them over the local copy.
@@ -584,7 +589,7 @@ export default function Game({
             void closeRun(open.runId, submission).then((r) => {
               if ("error" in r) setSyncNote(`Run not recorded: ${r.error}`);
             });
-          } else if (!tutorial && !adminRef.current && banked) {
+          } else if (!tutorial && banked) {
             // A practice run that walked out with something. Nothing was
             // banked, because nothing opened it — and saying so is the whole
             // job here. Silence would read as loot going missing.

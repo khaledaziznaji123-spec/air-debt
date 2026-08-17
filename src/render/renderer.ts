@@ -294,8 +294,6 @@ export class Renderer {
    * out the day something stands there.
    */
   private chamberNote: Text;
-  /** On screen for the whole of a developer-mode run. See `SimState.god`. */
-  private adminText: Text;
   /**
    * The run's takings, top right: gold on its own line, and under it one cell
    * per gem grade in ascending order, left to right.
@@ -406,18 +404,6 @@ export class Renderer {
     });
     this.promptText.anchor.set(0.5, 0);
 
-    this.adminText = new Text({
-      text: "ADMIN — NOTHING CAN END THIS RUN",
-      style: new TextStyle({
-        fontFamily: "ui-monospace, Menlo, Consolas, monospace",
-        fontSize: 11,
-        fontWeight: "700",
-        fill: COLOR.legendary,
-        letterSpacing: 3,
-      }),
-    });
-    this.adminText.anchor.set(0.5, 0);
-    this.adminText.visible = false;
 
     this.tally.addChild(this.tallyGfx);
     this.tally.visible = false;
@@ -484,7 +470,6 @@ export class Renderer {
       this.airText,
       this.promptText,
       this.depthText,
-      this.adminText,
       this.tally,
       this.debugText,
     );
@@ -4485,17 +4470,21 @@ export class Renderer {
     this.drawDepth(state);
     this.drawTally(state);
 
-    // Say so, always. A run where nothing can kill you and one where things can
-    // look identical right up until the moment you notice you have been
-    // standing in spikes for a minute — and then you have to wonder whether the
-    // spikes are broken. The flag has to be on screen.
     this.drawPotions(state);
 
-    // Not in the hall. The banner exists so a developer never mistakes god mode
-    // for the game being broken; in a tutorial "nothing can kill you" is the
-    // expected state and saying so is just another line to read.
-    this.adminText.visible = state.god && !teaching;
-    if (this.adminText.visible) this.adminText.position.set(VIEW_W / 2, 196);
+    // NOTHING ON SCREEN SAYS "ADMIN".
+    //
+    // There was a line across the middle of the view for the whole of a
+    // developer-mode run, on the argument that a run where nothing can kill you
+    // and a run where things can look identical until you notice you have been
+    // standing in spikes for a minute. That argument is real but it is a
+    // developer's problem, and it was being solved on the one surface the game
+    // is judged on — it sat over the dungeon in a recording, in a screenshot,
+    // and in front of anybody being shown the game.
+    //
+    // Admin mode is still perfectly visible where it belongs: the toggle that
+    // turned it on is in Settings, and the shop shows an admin purse. The view
+    // itself keeps quiet.
 
     // The prompt eases in and out rather than appearing. Crossing the mouth
     // swaps one line for nothing at the same instant the light changes hands,

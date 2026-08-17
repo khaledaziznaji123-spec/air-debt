@@ -27,6 +27,14 @@ export type StoredProgress = {
   levered: string[];
   skin: string | null;
   pet: string | null;
+  /**
+   * Granted by hand in the database and nowhere else.
+   *
+   * There is no endpoint that sets this and there must never be one: it buys an
+   * invincible run that still scores, so an endpoint that granted it would be
+   * an endpoint that granted an unbeatable leaderboard position.
+   */
+  admin: boolean;
 };
 
 export const EMPTY: StoredProgress = {
@@ -37,6 +45,7 @@ export const EMPTY: StoredProgress = {
   levered: [],
   skin: null,
   pet: null,
+  admin: false,
 };
 
 let admin: SupabaseClient | null = null;
@@ -73,7 +82,7 @@ export async function load(userId: string): Promise<StoredProgress> {
   const sb = service();
   const { data, error } = await sb
     .from("progress")
-    .select("levels, gems, gold, legendaries, levered, skin, pet")
+    .select("levels, gems, gold, legendaries, levered, skin, pet, admin")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -97,6 +106,7 @@ export async function load(userId: string): Promise<StoredProgress> {
     levered: (data.levered as string[]) ?? [],
     skin: data.skin ?? null,
     pet: data.pet ?? null,
+    admin: Boolean(data.admin),
   };
 }
 

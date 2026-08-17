@@ -56,10 +56,17 @@ export function bagValue(carried: SimState["carried"]): number {
  * the ceiling instead, so the whole system only ever sorts one way.
  */
 export function scoreOf(state: SimState, board: Board): number | null {
-  // Never the tutorial, and never a god-mode run. Both live in the state itself
-  // rather than alongside it precisely so this check is possible — a flag the
-  // reducer never recorded could not be confirmed by a replay.
-  if (state.tutorial !== null || state.god) return null;
+  // Never the tutorial. The hall is a fixed room with a fixed payout and three
+  // goblins that do not move — it is not a run and a score from it means
+  // nothing.
+  //
+  // A god-mode run MAY rank, which was a deliberate decision and not the
+  // obvious one. Nothing can kill an invincible player, so such a run is easier
+  // than any honest one and will out-score it. It is allowed because the people
+  // who have it are named in the database by hand and their rows are LABELLED
+  // on the board — see `runs.admin`. An unmarked invincible score at the top of
+  // a board would make the board a lie; a marked one is just a marked one.
+  if (state.tutorial !== null) return null;
 
   if (board === "riches") {
     // Banked, not carried. The extraction decision IS the game: a run that

@@ -65,7 +65,7 @@ const FACTS = [
   },
   {
     title: "Leaderboards you cannot fake",
-    line: "A score is never submitted. The keystrokes are, and the server replays them through the same reducer from a seed it issued before the run started. Forging a score means forging a run.",
+    line: "A score is never submitted. The keystrokes are, and the server replays them through the same reducer from a seed it issued before the run started. Forging a score means forging a run. Developer runs are allowed on the boards and are labelled as such on the row.",
   },
   {
     title: "Nothing is client-written",

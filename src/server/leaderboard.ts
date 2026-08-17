@@ -76,6 +76,16 @@ export type StartedRun = {
   runId: string;
   seed: number;
   air: number;
+  /**
+   * Whether this run is invincible, decided HERE and told to the client rather
+   * than asked of it.
+   *
+   * Admin used to be a browser flag in `localStorage`, which was fine while it
+   * only affected the player's own fun. It affects a public board now, so it is
+   * a column on `progress` granted by hand in the database — and the client is
+   * informed of it so the run it plays matches the run the server will replay.
+   */
+  admin: boolean;
 };
 
 /**
@@ -111,12 +121,17 @@ export async function start(userId: string): Promise<StartedRun> {
       // run that shopped mid-session would be rejected as a forgery.
       loadout: loadoutOf(progress),
       levered: progress.levered,
+      // Frozen with everything else, for the same reason: the replay has to run
+      // under the same rules the player did, and a request cannot be allowed to
+      // choose them. "This run was invincible" is exactly the sentence a cheat
+      // would send, because it buys an easy run that still scores.
+      admin: progress.admin,
     })
     .select("id")
     .single();
 
   if (error) throw new Error(error.message);
-  return { runId: data.id as string, seed, air };
+  return { runId: data.id as string, seed, air, admin: progress.admin };
 }
 
 export type Submission =
@@ -150,7 +165,7 @@ export async function submit(
   const sb = service();
   const { data, error } = await sb
     .from("runs")
-    .select("user_id, seed, air, loadout, levered, submitted_at")
+    .select("user_id, seed, air, loadout, levered, admin, submitted_at")
     .eq("id", runId)
     .maybeSingle();
 
@@ -189,9 +204,12 @@ export async function submit(
     seed: Number(data.seed),
     openShortcuts: (data.levered as string[]) ?? [],
     loadout: data.loadout as Loadout,
-    // Never from the request, and never true. A god-mode run scores nothing
-    // (see `scoreOf`), but it should not be possible to ASK for one either.
-    god: false,
+    // From the ROW, never the request. An admin run is replayed with the same
+    // invincibility it was played with — otherwise the player dies in the replay
+    // where they did not in the game, and the score comes out wrong — and a
+    // request that could set this would be a request that buys an invincible run
+    // with a real score on it.
+    god: Boolean(data.admin),
   });
 
   const scores = BOARDS.map((board) => ({
@@ -272,6 +290,15 @@ export type Row = {
   value: number;
   at: string;
   mine: boolean;
+  /**
+   * Played with invincibility on. Shown on the row, always.
+   *
+   * These runs are allowed to rank — the people who can make them are named in
+   * the database by hand — but an unmarked invincible score at the top of a
+   * board would make the board a lie, and not lying is the only thing a
+   * leaderboard has to offer.
+   */
+  admin: boolean;
 };
 
 /**
@@ -289,7 +316,7 @@ export async function top(
   const column = board === "riches" ? "riches" : "speed";
   let query = service()
     .from("runs")
-    .select("user_id, name, " + column + ", submitted_at")
+    .select("user_id, name, admin, " + column + ", submitted_at")
     .not("submitted_at", "is", null)
     .not(column, "is", null)
     // Higher is better on both boards — that is what `scoreOf` guarantees, and
@@ -312,6 +339,7 @@ export async function top(
       value: Number(row[column]),
       at: String(row.submitted_at),
       mine: Boolean(options.userId) && row.user_id === options.userId,
+      admin: Boolean(row.admin),
     };
   });
 }

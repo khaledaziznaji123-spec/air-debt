@@ -118,10 +118,15 @@ test("a boss that never fell scores nothing on speed", () => {
   );
 });
 
-test("god mode and the tutorial are worth nothing on any board", () => {
-  // Both flags live in the state rather than beside it precisely so this can be
-  // checked by a replay. A flag the reducer never recorded could be claimed by
-  // a client and never contradicted.
+test("the tutorial is worth nothing, but an invincible run can rank", () => {
+  // Two different decisions that used to be one.
+  //
+  // The hall scores nothing because it is a fixed room with a fixed payout — a
+  // score from it is meaningless. A god run DOES score, because the accounts
+  // that can make one are named in the database by hand and the board labels
+  // their rows. That is the part that makes it honest rather than the part that
+  // makes it fair: such a run is easier than any real one and will out-score it,
+  // and the answer is to say so on the row rather than to hide it.
   const banked = {
     ...createInitialState(60 * 60 * 10),
     outcome: "extracted" as const,
@@ -130,7 +135,11 @@ test("god mode and the tutorial are worth nothing on any board", () => {
     felledTick: 600,
   };
   assert.ok(scoresOf(banked).length === 2, "an honest run scores on both");
-  assert.deepEqual(scoresOf({ ...banked, god: true }), []);
+  assert.deepEqual(
+    scoresOf({ ...banked, god: true }),
+    scoresOf(banked),
+    "an invincible run should rank the same as any other — labelled, not barred",
+  );
   assert.deepEqual(
     scoresOf({
       ...banked,

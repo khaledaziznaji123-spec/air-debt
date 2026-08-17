@@ -113,7 +113,13 @@ export function localHasProgress(): boolean {
  * `src/server/leaderboard.ts`). There is nothing in either request worth
  * tampering with, which is the entire design.
  */
-export type OpenRun = { runId: string; seed: number; air: number };
+export type OpenRun = {
+  runId: string;
+  seed: number;
+  air: number;
+  /** Decided by the server from a column, not by this browser. */
+  admin: boolean;
+};
 
 export async function openRun(): Promise<OpenRun | null> {
   const jwt = await token();
@@ -130,7 +136,12 @@ export async function openRun(): Promise<OpenRun | null> {
   const body = (await r.json()) as Partial<OpenRun> & { error?: string };
   if (typeof body.runId !== "string" || typeof body.seed !== "number")
     return null;
-  return { runId: body.runId, seed: body.seed, air: Number(body.air) };
+  return {
+    runId: body.runId,
+    seed: body.seed,
+    air: Number(body.air),
+    admin: Boolean(body.admin),
+  };
 }
 
 export type RunScores = { board: "riches" | "speed"; value: number }[];
