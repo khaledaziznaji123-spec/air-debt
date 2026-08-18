@@ -201,7 +201,14 @@ export default function Landing() {
             out — the shortcuts you open are permanent, and they are the only way
             the maths ever works.
           </p>
-          <div className="mt-8 w-full">
+          {/* A flex container, not a plain div.
+              The form inside is `w-full max-w-md` with no automatic margins, so
+              in an ordinary block it capped its width and then sat against the
+              left edge — centred text above it, left-aligned form under it. The
+              parent's `items-center` could not reach it because the wrapper, not
+              the form, was the flex child. Its own top margin does the spacing,
+              so there is none here. */}
+          <div className="flex w-full justify-center">
             <Gate />
           </div>
         </div>
