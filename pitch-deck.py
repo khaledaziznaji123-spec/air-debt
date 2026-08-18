@@ -193,6 +193,36 @@ def footer(s, n):
     )
 
 
+def fade(s, ms=450):
+    """
+    A short cross-fade onto this slide.
+
+    python-pptx has no transition API, so the element is written into the slide's
+    XML directly. The schema puts `p:transition` after `p:clrMapOvr` and before
+    `p:timing`, and PowerPoint is strict about that order — appended anywhere else
+    the file opens with a repair prompt, which is the worst possible thing to
+    happen to a deck in front of somebody.
+
+    A fade and nothing else, deliberately. Every other transition PowerPoint
+    offers announces itself, and an effect the audience notices is an effect that
+    took their attention off the slide. This one is only there so a slide arrives
+    rather than snapping.
+    """
+    from pptx.oxml.ns import qn
+
+    sld = s._element
+    for existing in sld.findall(qn("p:transition")):
+        sld.remove(existing)
+
+    tr = sld.makeelement(qn("p:transition"), {"spd": "med", "advClick": "1"})
+    tr.append(sld.makeelement(qn("p:fade"), {}))
+
+    # After clrMapOvr if it is there, otherwise straight after cSld.
+    anchor = sld.find(qn("p:clrMapOvr")) if sld.find(qn("p:clrMapOvr")) is not None else sld.find(qn("p:cSld"))
+    anchor.addnext(tr)
+    return tr
+
+
 def picture(s, name, x, y, w):
     """A screenshot, with a hairline so it does not float on the dark."""
     f = SHOTS / name
@@ -583,6 +613,10 @@ text(
     underline=True,
 )
 footer(s, 9)
+
+# Applied here rather than per-slide, so a slide added later cannot miss it.
+for s in prs.slides:
+    fade(s)
 
 prs.save(OUT)
 print(f"wrote {OUT.name}  ({OUT.stat().st_size // 1024} KB, {len(prs.slides.__iter__.__self__._sldIdLst)} slides)")
