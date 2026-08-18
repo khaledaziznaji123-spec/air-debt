@@ -308,7 +308,7 @@ export const SHOP: readonly ShopItem[] = [
     id: "gear.tank",
     category: "gear",
     name: "Air tank",
-    blurb: "Thirty more seconds on the clock. Ten of these, and no more.",
+    blurb: "Eighteen more seconds on the clock. Ten of these, and no more — and ten of these still will not walk the whole dungeon.",
     price: { gems: gems(32), gold: 0 },
     deep: { from: 6, topaz: 3, diamond: 2 },
     tiers: tuning.air.upgradeTiers,

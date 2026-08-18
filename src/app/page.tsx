@@ -35,7 +35,7 @@ const SHOTS = [
     src: "/shots/fire.png",
     alt: "The fire environment with one point eight seconds of air left: the clock and its dial have gone red, a phoenix hangs above a lava pit throwing fire down at the player, and two chests sit further along the ledge.",
     title: "Thirty seconds",
-    line: "The clock is the whole game. Every fight, every chest and every step back out is spent from the same tank — and the biggest tank you can buy still is not enough to walk the whole way. Shortcuts are the only way the maths ever works.",
+    line: "The clock is the whole game. Every fight, every chest and every step back out is spent from the same tank. The biggest one you can buy holds three and a half minutes — and a careful run that takes every chest finishes with about five seconds left, which is exactly as much room as it sounds like.",
   },
   {
     src: "/shots/cenote.png",
