@@ -205,7 +205,7 @@ rolled when the dungeon is laid out rather than when they die. The Warden pays
 
 ## The design in six lines
 
-- **30 seconds of air to start**, upgradeable in ten steps to 5.5 minutes.
+- **30 seconds of air to start**, upgradeable in ten steps to 3.5 minutes — a ceiling set from measured clears rather than from the original estimate, which was out by two thirds.
 - **A maxed tank still is not enough** to walk the whole dungeon and beat the boss. Shortcuts close the gap, which makes them the win condition rather than a convenience.
 - **Shortcuts open only from a lever** placed past the ground they skip — so permanent progress cannot be bought, skipped, or learned from a walkthrough. Most are doors; the first is a chute, whose lever opens the floor above it and whose ride ends by throwing you into the air.
 - **Combat is defensive.** A 0.3-second parry that reflects arrows, a 0.4-second punish for guessing, and a slow stun as the only guard-breaker.

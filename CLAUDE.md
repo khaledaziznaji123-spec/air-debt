@@ -38,7 +38,7 @@ Full detail in the PRD. The load-bearing ones:
 
 - **Core loop**: fixed layout, encounters reshuffle. Win = reach the final boss with air left to fight it.
 - **The timer is oxygen.** Its job is to degrade decision quality — it rushes the player into mistakes. Running out transforms the player into a monster.
-- **30 seconds base air**, upgradeable in ten +30s steps to a 5.5-minute ceiling.
+- **30 seconds base air**, upgradeable in ten +18s steps to a 3.5-minute ceiling. The ceiling comes from measured clears (a careful chest-taking run is 205s, a direct one 141s), not from the pre-build estimate it was originally solved against.
 - **The max tank is deliberately insufficient.** Walking the whole dungeon at full air still loses. Shortcuts close the gap, so **shortcuts are the win condition**.
 - **Shortcuts open only via a lever** placed past the ground they skip. Permanent progress can never be bought, skipped, or learned from a video.
 - **Combat is defensive.** 0.3s parry (reflects arrows), 0.4s punish for mistiming, stun as the only guard-breaker. Enemies are built from the player's own verb set; difficulty is verb breadth, not stat inflation.

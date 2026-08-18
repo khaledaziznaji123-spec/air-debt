@@ -43,9 +43,27 @@ export const tuning = {
      */
     testingOverride: s(120) as number | null,
     /** FR-19.2 — each air tank upgrade adds this much. */
-    perUpgrade: s(30),
-    /** FR-19.3 — hard ceiling. 30s + 10 × 30s. */
-    max: s(330),
+    perUpgrade: s(18),
+    /**
+     * FR-19.3 — hard ceiling. 30s + 10 × 18s = three and a half minutes.
+     *
+     * It was five and a half, which was solved against an ESTIMATE of how long
+     * an environment takes to cross. The estimate was nearly double the truth,
+     * so the ceiling built on it was nearly double what the dungeon needs — and
+     * five and a half minutes of held breath was never believable anyway.
+     *
+     * This number comes from play rather than from arithmetic. Measured on a
+     * full tank with every shortcut open:
+     *
+     *   a direct clear                            141s
+     *   a careful clear, taking chests            205s
+     *
+     * Against a two-hundred-and-ten second tank, the careful run finishes with
+     * five seconds in hand and the direct one with sixty-nine. That is the shape
+     * the design wants: playing well buys room, playing greedily spends it, and
+     * the last chest is always a real question.
+     */
+    max: s(210),
     /** FR-19 — number of purchasable upgrade tiers. */
     upgradeTiers: 10,
     /**
@@ -207,7 +225,20 @@ export const tuning = {
 
   budget: {
     /** FR-19.1 — traversing one environment at AVERAGE play (FR-19.5). */
-    environmentTraverse: s(60),
+    /**
+     * Thirty-six seconds, measured rather than assumed.
+     *
+     * Sixty was a guess made before the dungeon existed, and the whole time
+     * budget — including the air ceiling — was solved from it. Real clears put
+     * the true figure at about thirty-six, so every number derived from sixty
+     * was out by two thirds.
+     *
+     * Changing this used to move the world, because `environmentLength` was
+     * derived from it. It is a fixed number now (see `dungeon.ts`), so this is
+     * purely what the budget BELIEVES about a dungeon it no longer builds —
+     * which is what makes correcting it safe.
+     */
+    environmentTraverse: s(36),
     /** FR-20.1 — one mini-boss, on top of the traverse (FR-20.4). */
     miniBoss: s(10),
     /** FR-20.2 — the final boss. */
