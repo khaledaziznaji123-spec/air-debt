@@ -40,15 +40,40 @@ export const TRAVERSE_PACE = 0.65;
  */
 export const averageSpeed = tuning.movement.walkSpeed * TRAVERSE_PACE;
 
-/** How long one environment is, in world units. FR-19.1 expressed as distance. */
-export const environmentLength = Math.round(
-  tuning.budget.environmentTraverse * averageSpeed,
-);
+/**
+ * How long one environment is, in world units.
+ *
+ * A FIXED NUMBER, and it used to be `environmentTraverse * averageSpeed`.
+ *
+ * That derivation was right while the dungeon was being designed: the time
+ * budget was the specification and the world was poured from it. It is the wrong
+ * way round now that the world exists and has been played, because it makes the
+ * air ceiling and the map the same decision — lower the tank, and every piece,
+ * fixture and shortcut in the game moves. That is what happened when the ceiling
+ * was tried at three and a half minutes: eighteen placement invariants broke,
+ * none of which had anything to do with air.
+ *
+ * So the arrow is reversed. The map is the fact now, and the budget describes
+ * it. `checkTimeBudget` still guards FR-20 exactly as before — it just checks a
+ * world it no longer builds, which means the ceiling can be tuned against
+ * measured runs without moving anything.
+ *
+ * The literal is the value the old expression produced, so nothing shifted the
+ * day this changed. If the dungeon is ever meant to get longer or shorter, this
+ * is now the number to change, deliberately, on its own.
+ */
+export const environmentLength = 10062;
 
-/** How much ground one shortcut skips. FR-20.6's ~13 seconds as distance. */
-export const shortcutSpan = Math.round(
-  tuning.budget.shortcutSaving * averageSpeed,
-);
+/**
+ * How much ground one shortcut skips, in world units. Fixed for the same reason
+ * as `environmentLength`, and the same value the old derivation produced.
+ *
+ * Worth knowing: this is what a shortcut IS, so it constrains what one can be
+ * worth in the budget. It is 37% of an environment; a saving claimed in
+ * `tuning.budget` that implies much more than that is a claim about ground that
+ * does not exist.
+ */
+export const shortcutSpan = 3689;
 
 /**
  * How far past the shortcut's far end its lever sits.

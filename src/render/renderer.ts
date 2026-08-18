@@ -307,6 +307,21 @@ export class Renderer {
   private goldIcon: Sprite | null = null;
   private gemCells: { icon: Sprite | null; text: Text }[] = [];
   private debug = false;
+  /**
+   * How long each environment took, in ticks, as they are crossed.
+   *
+   * For tuning the air ceiling against real play rather than against an
+   * estimate. `tuning.budget.environmentTraverse` is a guess at how long one
+   * environment takes to cross, and the whole time budget is solved from it —
+   * so if the guess is wrong, the ceiling derived from it is wrong too, and
+   * there was previously no way to find out except by feel.
+   *
+   * View only. The simulation neither knows nor cares that this is being
+   * counted.
+   */
+  private splits: number[] = [];
+  private splitFrom = 0;
+  private lastEnv = -1;
   private art: SpriteSet;
   /** One sprite per enemy, reused across ticks rather than rebuilt. */
   private enemySprites: Sprite[] = [];
@@ -662,6 +677,20 @@ export class Renderer {
       // corner and are not debug-only.
       this.debugText.position.set(12, 66);
       const stats = statsFor(state.loadout);
+      // Splits, recorded as the player crosses. Reset when a run restarts.
+      if (state.tick < this.splitFrom) {
+        this.splits = [];
+        this.splitFrom = 0;
+        this.lastEnv = -1;
+      }
+      if (state.entered && state.environment !== this.lastEnv) {
+        if (this.lastEnv >= 0) this.splits.push(state.tick - this.splitFrom);
+        this.splitFrom = state.tick;
+        this.lastEnv = state.environment;
+      }
+      const here = state.entered ? state.tick - this.splitFrom : 0;
+      const secs = (ticks: number) => (ticks / 60).toFixed(1) + "s";
+
       this.debugText.text = [
         `tick     ${state.tick}`,
         `air      ${state.air} (${(state.air / 60).toFixed(1)}s)`,
@@ -672,6 +701,12 @@ export class Renderer {
         `action   ${p.action.kind ?? "-"} (lockout ${p.action.lockout})`,
         `outcome  ${state.outcome}`,
         `env      ${state.environment + 1}/${tuning.budget.environmentCount}`,
+        // What each environment actually cost, against what the budget assumes
+        // one costs. The pair is the point: the difference between them is how
+        // wrong the air ceiling is.
+        `splits   ${this.splits.map(secs).join("  ") || "-"}${this.splits.length ? "  |" : ""} here ${secs(here)}`,
+        `budget   ${secs(tuning.budget.environmentTraverse)} assumed per environment`,
+        `elapsed  ${secs(this.splits.reduce((a, b) => a + b, 0) + here)} since entering`,
         `open     ${state.openShortcuts.length}/${shortcuts.length} shortcuts`,
         `flicked  ${state.leversFlicked.join(", ") || "-"}`,
         `enemies  ${state.enemies.filter((e) => e.phase !== "dead").length} alive`,
