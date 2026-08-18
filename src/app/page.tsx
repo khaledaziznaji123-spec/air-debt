@@ -119,7 +119,18 @@ export default function Landing() {
             none of it was.
           </p>
 
-          <Gate />
+          {/* The sign-in used to sit here.
+              Asking for an account is the first thing a stranger was met with,
+              before they had seen a single frame of the game — which is asking
+              somebody to commit to something they have not been shown. It is at
+              the bottom now, after the screenshots and after the argument, where
+              the answer to "why would I" has already been given. */}
+          <a
+            href="#play"
+            className="mt-9 inline-flex items-center gap-2 rounded-full border border-[#5fd9cf]/40 px-6 py-2.5 font-mono text-xs font-bold tracking-[0.18em] text-[#5fd9cf] uppercase transition-colors hover:border-[#5fd9cf] hover:bg-[#5fd9cf]/10"
+          >
+            Play free <span aria-hidden>↓</span>
+          </a>
 
           <p className="mt-8 font-mono text-xs tracking-widest text-[#5a6875]">
             FREE · IN YOUR BROWSER · KEYBOARD ONLY
@@ -173,6 +184,26 @@ export default function Landing() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------------------- play */}
+      <section
+        id="play"
+        className="border-t border-white/5 px-6 py-20 sm:py-28"
+      >
+        <div className="mx-auto flex max-w-xl flex-col items-center text-center">
+          <h2 className="font-mono text-2xl font-bold tracking-tight text-[#e7ecf2] sm:text-3xl">
+            Thirty seconds is not very long.
+          </h2>
+          <p className="mt-4 text-pretty text-[#9fb0c0]">
+            Free, in the browser, no download. An account keeps what you carry
+            out — the shortcuts you open are permanent, and they are the only way
+            the maths ever works.
+          </p>
+          <div className="mt-8 w-full">
+            <Gate />
+          </div>
         </div>
       </section>
 
