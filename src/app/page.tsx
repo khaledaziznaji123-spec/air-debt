@@ -67,8 +67,8 @@ const SHOTS = [
  */
 const FACTS = [
   {
-    title: "Deterministic simulation",
-    line: "The game is a pure reducer at a fixed sixty ticks a second, with PixiJS as a view layer over the top. Nothing about how the game plays lives in the renderer.",
+    title: "The same run, every time",
+    line: "The game is a pure function of the keys you press, at a fixed sixty ticks a second. Play the same run twice and it plays out identically — on any machine, in any browser, a year from now.",
   },
   {
     title: "Leaderboards you cannot fake",
@@ -76,7 +76,7 @@ const FACTS = [
   },
   {
     title: "Nothing is client-written",
-    line: "No request in the game adds to a balance by asking. Loot is credited from the replay, so the economy cannot be edited from a browser console.",
+    line: "There is no request in this game that adds to a balance by asking. Your loot is credited from the replay of the run that earned it — so the economy cannot be edited from a browser console, and it never could be.",
   },
 ];
 
@@ -104,16 +104,25 @@ export default function Landing() {
           <h1 className="font-mono text-5xl font-bold tracking-[0.3em] sm:text-7xl">
             AIR<span className="text-[#5fd9cf]"> DEBT</span>
           </h1>
-          <p className="mt-6 max-w-xl text-balance text-lg leading-relaxed text-[#9fb0c0] sm:text-xl">
-            Thirty seconds of air. Five environments deep. Everything you are
-            carrying is on you — and the way out is the way you came.
+          {/* The argument, not a description.
+              This used to read "Thirty seconds of air. Five environments deep.
+              Everything you are carrying is on you" — three true facts that ask
+              the reader nothing. The second sentence is the whole game: it is
+              the reason the timer is interesting rather than merely present,
+              and it puts a question in your head before you have scrolled. */}
+          <p className="mt-6 max-w-xl text-balance text-xl leading-relaxed text-[#e7ecf2] sm:text-2xl">
+            Thirty seconds of air — and every second you spend down there is a
+            second you need to get back.
+          </p>
+          <p className="mt-4 max-w-lg text-balance text-base leading-relaxed text-[#9fb0c0] sm:text-lg">
+            Walk out and everything you are carrying is yours. Don&apos;t, and
+            none of it was.
           </p>
 
           <Gate />
 
           <p className="mt-8 font-mono text-xs tracking-widest text-[#5a6875]">
-            KEYBOARD ONLY · A D MOVE · SPACE JUMP · SHIFT SLIDE · Q SWING · R
-            PARRY · L STUN
+            FREE · IN YOUR BROWSER · KEYBOARD ONLY
           </p>
         </div>
       </section>
@@ -150,7 +159,7 @@ export default function Landing() {
       <section className="border-t border-white/5 bg-white/[0.02]">
         <div className="mx-auto max-w-5xl px-6 py-16">
           <h2 className="font-mono text-sm tracking-[0.25em] text-[#5fd9cf]">
-            UNDER IT
+            THINGS YOU CAN CHECK
           </h2>
           <ul className="mt-8 grid gap-8 sm:grid-cols-3">
             {FACTS.map((fact) => (

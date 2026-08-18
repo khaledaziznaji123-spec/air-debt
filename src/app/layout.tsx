@@ -17,7 +17,7 @@ import UiSounds from "./ui-sounds";
 export const metadata: Metadata = {
   title: "Air Debt",
   description:
-    "Thirty seconds of air, five environments deep, and everything you are carrying is on you.",
+    "Thirty seconds of air, and every second you spend down there is a second you need to get back.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
