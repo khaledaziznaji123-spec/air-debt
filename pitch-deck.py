@@ -106,6 +106,8 @@ def text(
     spacing=0,
     align=PP_ALIGN.LEFT,
     leading=1.25,
+    link=None,
+    underline=False,
 ):
     tb = slide.shapes.add_textbox(x, y, w, h)
     tf = tb.text_frame
@@ -121,6 +123,14 @@ def text(
         r.font.color.rgb = colour
         r.font.name = font
         r.font.bold = bold
+        r.font.underline = underline
+        if link:
+            # A real hyperlink, so it is clickable in the slideshow rather than
+            # a URL somebody has to type out while everyone watches.
+            r.hyperlink.address = link
+            # PowerPoint recolours hyperlinks to the theme's link colour unless
+            # the run's own colour is reasserted after the link is set.
+            r.font.color.rgb = colour
         if spacing:
             # python-pptx has no letter-spacing API; set it on the XML.
             r.font._rPr.set("spc", str(int(spacing * 100)))
@@ -234,6 +244,7 @@ text(
     font=MONO,
     bold=True,
     spacing=2,
+    link=f"https://{FACTS['url']}",
 )
 text(s, "Built by one person  ·  Web  ·  Next.js and Postgres", M, Inches(6.05), Inches(8), Inches(0.35), size=12, colour=DIM, font=MONO, spacing=1.4)
 footer(s, 1)
@@ -553,8 +564,24 @@ text(
     colour=MUTED,
     leading=1.4,
 )
-box(s, M, Inches(6.18), Inches(4.4), Inches(0.55), AIR)
-text(s, f"PLAY IT NOW  —  {FACTS['url']}", M + Inches(0.3), Inches(6.33), Inches(4.2), Inches(0.3), size=12, colour=GROUND, font=MONO, bold=True, spacing=1.2)
+# No slab behind it. A filled rectangle under a line of text is a button in a
+# web page and a smudge in a slideshow — it sat over the sentence rather than
+# behind it. The line carries itself, and it is clickable.
+text(
+    s,
+    f"PLAY IT NOW  —  {FACTS['url']}",
+    M,
+    Inches(6.25),
+    Inches(7),
+    Inches(0.4),
+    size=15,
+    colour=AIR,
+    font=MONO,
+    bold=True,
+    spacing=1.2,
+    link=f"https://{FACTS['url']}",
+    underline=True,
+)
 footer(s, 9)
 
 prs.save(OUT)
