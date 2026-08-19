@@ -155,7 +155,10 @@ test.describe("contact and support", () => {
 
     await page.goto("/contact");
     await expect(
-      page.getByRole("heading", { name: /contact and support/i }),
+      // The page is titled "Support" now that it answers questions as well as
+      // listing numbers. The home screen's corner still says "Contact and
+      // support", which is what a person is looking for when they need it.
+      page.getByRole("heading", { name: /^support$/i, level: 1 }),
     ).toBeVisible();
 
     // WhatsApp has to be the wa.me form — no plus, no spaces — or it opens a
@@ -333,5 +336,47 @@ test.describe("sound", () => {
       JSON.parse(window.localStorage.getItem("airdebt.prefs.v1") ?? "{}"),
     );
     expect(prefs.muted).toBe(true);
+  });
+});
+
+test.describe("support", () => {
+  test("the page answers the common questions and offers a form", async ({
+    page,
+  }) => {
+    await page.goto("/contact");
+
+    // The FAQ is `<details>`, so it is in the document and findable by the
+    // browser's own search even while every answer is collapsed.
+    await expect(page.getByText("Common questions")).toBeVisible();
+    await expect(page.locator("details")).toHaveCount(10);
+
+    // Opening one reveals its answer, with no JavaScript involved.
+    const timer = page.locator("details", {
+      hasText: "The timer feels impossible",
+    });
+    await timer.getByRole("group").or(timer.locator("summary")).first().click();
+    await expect(timer.getByText(/shortcuts/i).first()).toBeVisible();
+
+    // And the form the requirement is really about.
+    await expect(page.getByLabel("Your name")).toBeVisible();
+    await expect(page.getByLabel("Your email")).toBeVisible();
+    await expect(page.getByLabel("What happened")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^send$/i })).toBeVisible();
+  });
+
+  test("the endpoint refuses a malformed message without writing one", async ({
+    request,
+  }) => {
+    // Checked at the API rather than by filling the form, because a real
+    // submission writes a real row — a test suite should not be the loudest
+    // correspondent this project has.
+    const bad = await request.post("/api/contact", { data: { name: "x" } });
+    expect(bad.status()).toBe(400);
+
+    const short = await request.post("/api/contact", {
+      data: { name: "Tester", email: "not-an-email", body: "hello there" },
+    });
+    expect(short.status()).toBe(400);
+    expect((await short.json()).error).toMatch(/email/i);
   });
 });

@@ -1,7 +1,9 @@
 import Link from "next/link";
+import ContactForm from "./form";
+import Faqs from "./faqs";
 
 export const metadata = {
-  title: "Air Debt — contact",
+  title: "Air Debt — support",
 };
 
 /**
@@ -83,17 +85,36 @@ export default function ContactPage() {
 
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-[#e7ecf2]">
-          Contact and support
+          Support
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-[#6b7a89]">
           Air Debt is made by one person. Anything you send here reaches me
           directly — bugs, ideas, a score you think is wrong, or a conversation
-          about the project.
+          about the project. The answer may already be below.
         </p>
       </div>
 
-      <ul className="flex flex-col gap-3">
-        {WAYS.map((way) => (
+      <Faqs />
+
+      {/* The form first and the channels under it.
+          A form asks for a sentence; a phone number asks somebody to start a
+          conversation with a stranger, and the people who would never do the
+          second are exactly the ones whose bug reports are worth having. Both
+          are here, in the order most people will use them. */}
+      <section className="flex flex-col gap-3">
+        <h2 className="font-mono text-xs font-bold tracking-[0.2em] text-[#5fd9cf] uppercase">
+          Send a message
+        </h2>
+        <ContactForm />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-mono text-xs font-bold tracking-[0.2em] text-[#5fd9cf] uppercase">
+          Or reach me directly
+        </h2>
+
+        <ul className="flex flex-col gap-3">
+          {WAYS.map((way) => (
           <li
             key={way.label}
             className="rounded-lg border border-[#1c2531] bg-[#10151d] p-4"
@@ -122,7 +143,8 @@ export default function ContactPage() {
             <p className="mt-1.5 text-sm text-[#6b7a89]">{way.note}</p>
           </li>
         ))}
-      </ul>
+        </ul>
+      </section>
 
       <p className="text-xs leading-relaxed text-[#5a6875]">
         Reporting something broken? Say what you were doing and roughly when —

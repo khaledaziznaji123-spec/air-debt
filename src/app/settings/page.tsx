@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AdminBox from "./admin-box";
 import ControlsBox from "./controls-box";
+import SecurityBox from "./security-box";
 import TouchBox from "./touch-box";
 import ViewBox from "./view-box";
 
@@ -61,6 +62,8 @@ export default function SettingsPage() {
             Open profile
           </Link>
         </section>
+
+        <SecurityBox />
 
         <AdminBox />
 

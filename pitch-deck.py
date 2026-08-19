@@ -166,7 +166,19 @@ def rule(s, y, w=Inches(11.6)):
     box(s, M, y, w, Emu(9525), EDGE)
 
 
-def footer(s, n):
+_page = [0]
+
+
+def footer(s, n=None):
+    """The page number counts itself.
+
+    It used to be passed in, which made inserting a slide in the middle a
+    renumbering job across the whole file — the kind of chore that ends with two
+    slides both called 07 in front of an audience.
+    """
+    if n is None:
+        _page[0] += 1
+        n = _page[0]
     text(
         s,
         f"AIR DEBT  ·  {FACTS['url']}",
@@ -277,7 +289,76 @@ text(
     link=f"https://{FACTS['url']}",
 )
 text(s, "Built by one person  ·  Web  ·  Next.js and Postgres", M, Inches(6.05), Inches(8), Inches(0.35), size=12, colour=DIM, font=MONO, spacing=1.4)
-footer(s, 1)
+footer(s)
+
+# ======================================================= the problem it solves
+# The deck opened on the product. An investor deck opens on the reason the
+# product is allowed to exist.
+s = slide(prs, "The problem", WARN)
+heading(s, "A web game is the easiest thing in the world\nto try, and the hardest thing to take\nseriously.")
+pains = [
+    (
+        "Nothing to download",
+        "is why a browser game gets opened at all. No store, no install, no account before you have even seen it. That is a real distribution advantage and it is the reason to build on the web.",
+    ),
+    (
+        "And nothing to trust",
+        "is what comes with it. The browser runs the game, so the browser can lie about what happened in it. Every leaderboard on a free web game is decoration — anybody who opens the developer console is at the top of it.",
+    ),
+    (
+        "So nobody stays",
+        "There is nothing to be good at, because being good cannot be proved. Players arrive on the web and leave for a client they had to install, and the free game they tried got one session and never a second.",
+    ),
+]
+y = Inches(3.25)
+for name, what in pains:
+    rule(s, y)
+    text(s, name, M, y + Inches(0.18), Inches(3.1), Inches(0.4), size=15, colour=WARN, font=MONO, bold=True)
+    text(s, what, M + Inches(3.4), y + Inches(0.14), Inches(8.1), Inches(1.1), size=13, colour=TEXT, leading=1.3)
+    y += Inches(1.15)
+text(
+    s,
+    "RETENTION ON A FREE WEB GAME IS A TRUST PROBLEM WEARING A MARKETING PROBLEM'S CLOTHES.",
+    M,
+    Inches(6.8),
+    Inches(11.6),
+    Inches(0.4),
+    size=11,
+    colour=MUTED,
+    font=MONO,
+    spacing=1.2,
+)
+footer(s)
+
+# ================================================================ who plays it
+s = slide(prs, "Who plays it")
+heading(s, "Not everyone. This one.")
+text(
+    s,
+    "A segment that can be found on purpose, because it already says where it is.",
+    M,
+    Inches(2.45),
+    Inches(11.4),
+    Inches(0.4),
+    size=15,
+    colour=MUTED,
+)
+who = [
+    ("AGE", "16 to 28", "School, university, and the first years of earning. Skews male, roughly 70/30, in line with the genre."),
+    ("ALREADY PLAYS", "Dead Cells, Hades\nRisk of Rain, Celeste", "The action-roguelite audience. They have paid 10 to 25 dollars for this exact loop before, which is the only proof of willingness that counts."),
+    ("SEARCHES", "roguelite like Dead Cells\nbrowser game no download\nspeedrun leaderboard", "Reachable. These are keywords with intent behind them rather than a demographic guess, and the third one is somebody describing this game without knowing it exists."),
+    ("FOUND AT", "itch.io, r/roguelites\nspeedrun clips on TikTok\nand YouTube", "Communities that reward a verifiable time — the one thing this game can offer that the download-free competition cannot."),
+    ("SESSION", "3 to 8 minutes", "A run is at most three and a half. The product was built to the length of the gap in their day rather than hoping their day had a longer one."),
+    ("AND HERE", "The Gulf, and MENA", "One of the youngest and most connected gaming populations anywhere, with almost no competitive web titles built inside it. Arabic-first content in this genre is close to absent."),
+]
+y = Inches(3.1)
+for tag, name, why in who:
+    rule(s, y)
+    text(s, tag, M, y + Inches(0.14), Inches(1.8), Inches(0.3), size=9, colour=AIR, font=MONO, bold=True, spacing=1.4)
+    text(s, name, M + Inches(1.9), y + Inches(0.1), Inches(2.8), Inches(0.62), size=11, colour=TEXT, font=MONO, bold=True, leading=1.2)
+    text(s, why, M + Inches(4.85), y + Inches(0.1), Inches(6.6), Inches(0.62), size=11, colour=DIM, leading=1.22)
+    y += Inches(0.7)
+footer(s)
 
 # =========================================================================== 02
 s = slide(prs, "The loop")
@@ -319,7 +400,7 @@ for i, (t_, b_) in enumerate(cols):
     box(s, x, Inches(5.3), cw, Inches(1.3), SURFACE, EDGE)
     text(s, t_, x + Inches(0.22), Inches(5.46), cw, Inches(0.3), size=13, colour=BRASS, font=MONO, bold=True)
     text(s, b_, x + Inches(0.22), Inches(5.8), cw - Inches(0.4), Inches(0.72), size=11, colour=DIM, leading=1.3)
-footer(s, 2)
+footer(s)
 
 # =========================================================================== 03
 s = slide(prs, "The design")
@@ -364,7 +445,7 @@ text(
     colour=MUTED,
     leading=1.4,
 )
-footer(s, 3)
+footer(s)
 
 # =========================================================================== 04
 s = slide(prs, "Five environments")
@@ -395,7 +476,7 @@ text(
     colour=DIM,
     leading=1.3,
 )
-footer(s, 4)
+footer(s)
 
 # =========================================================================== 05
 s = slide(prs, "Safety", BRASS)
@@ -439,7 +520,7 @@ text(
     bold=True,
     leading=1.3,
 )
-footer(s, 5)
+footer(s)
 
 # =========================================================================== 06
 s = slide(prs, "Where it is")
@@ -510,7 +591,50 @@ text(
     colour=MUTED,
     leading=1.35,
 )
-footer(s, 6)
+footer(s)
+
+# ========================================================== how it makes money
+s = slide(prs, "How it makes money", BRASS)
+heading(s, "Cosmetics, seasons, and nothing that\nchanges a run.")
+text(
+    s,
+    "The shop is built and it is already cosmetic-only. Skins and pets change what you look like\n"
+    "walking out of the dungeon. They do not change whether you walk out.",
+    M,
+    Inches(2.6),
+    Inches(11.4),
+    Inches(0.8),
+    size=15,
+    colour=TEXT,
+    leading=1.35,
+)
+lines = [
+    ("COSMETICS", "Skins and pets", "Thirty shop items exist today. The paid ones are more of what is already there, sold to the players who stayed."),
+    ("SEASONS", "Ranked, every few weeks", "The boards reset, the top of them earns something that cannot be bought, and the pass to compete in the season is the thing sold."),
+    ("LATER", "Sponsored tournaments", "A verifiable time is a bracket that settles itself without a referee in the room. Nobody else offering a browser game can sell that."),
+]
+y = Inches(3.9)
+for tag, name, what in lines:
+    box(s, M, y, Inches(11.6), Inches(0.86), SURFACE, EDGE)
+    text(s, tag, M + Inches(0.3), y + Inches(0.16), Inches(1.6), Inches(0.3), size=9, colour=BRASS, font=MONO, bold=True, spacing=1.4)
+    text(s, name, M + Inches(2.0), y + Inches(0.12), Inches(2.7), Inches(0.4), size=13, colour=TEXT, font=MONO, bold=True)
+    text(s, what, M + Inches(4.9), y + Inches(0.12), Inches(6.4), Inches(0.62), size=11, colour=DIM, leading=1.22)
+    y += Inches(1.0)
+text(
+    s,
+    "AND WHY IT CAN BE CHARGED FOR AT ALL:  the economy is already server-owned. Selling currency on top of a\n"
+    "balance the browser can write is selling something you do not control, and most games discover that after\n"
+    "the payment provider is live. This one solved it first, which is why monetisation is an addition, not a rewrite.",
+    M,
+    Inches(6.5),
+    Inches(11.6),
+    Inches(0.85),
+    size=11,
+    colour=MUTED,
+    font=MONO,
+    leading=1.35,
+)
+footer(s)
 
 # =========================================================================== 07
 s = slide(prs, "What it is not", WARN)
@@ -540,7 +664,7 @@ for tag, colour, name, what in gaps:
     text(s, name, M + Inches(1.5), y + Inches(0.12), Inches(2.2), Inches(0.3), size=13, colour=TEXT, font=MONO, bold=True)
     text(s, what, M + Inches(3.8), y + Inches(0.12), Inches(7.7), Inches(0.55), size=11, colour=DIM, leading=1.22)
     y += Inches(0.82)
-footer(s, 7)
+footer(s)
 
 # =========================================================================== 08
 s = slide(prs, "What is next")
@@ -558,7 +682,7 @@ for name, when, what in nexts:
     text(s, what, M + Inches(0.28), y + Inches(0.48), Inches(9.2), Inches(0.4), size=11, colour=DIM, leading=1.2)
     text(s, when.upper(), M + Inches(9.9), y + Inches(0.3), Inches(1.5), Inches(0.3), size=10, colour=DIM, font=MONO, spacing=1.4, align=PP_ALIGN.RIGHT)
     y += Inches(1.0)
-footer(s, 8)
+footer(s)
 
 # =========================================================================== 09
 s = slide(prs, "Why partner")
@@ -612,7 +736,69 @@ text(
     link=f"https://{FACTS['url']}",
     underline=True,
 )
-footer(s, 9)
+footer(s)
+
+# ===================================================================== the ask
+# THE SLIDE THIS DECK DID NOT HAVE. Everything before it earns the right to say
+# a number, and a pitch that never says one has asked for nothing — which is
+# reliably what it gets.
+s = slide(prs, "The ask", AIR)
+text(s, "$25,000", M, Inches(1.3), Inches(5.4), Inches(1.5), size=64, colour=AIR, font=MONO, bold=True, spacing=-1)
+text(s, "for 10%", M + Inches(4.75), Inches(1.92), Inches(4), Inches(0.7), size=30, colour=TEXT, font=MONO, bold=True)
+text(
+    s,
+    "Twelve months of runway, priced at what it costs for one person to stop being one person.",
+    M,
+    Inches(2.8),
+    Inches(11.4),
+    Inches(0.4),
+    size=15,
+    colour=MUTED,
+)
+
+# A number with no plan behind it is a wish.
+text(s, "WHERE IT GOES", M, Inches(3.45), Inches(5), Inches(0.3), size=10, colour=AIR, font=MONO, bold=True, spacing=1.8)
+spend = [
+    ("$9,000", "1v1", "The mode that turns a timer into a rival. Contract art and audio where I am slowest."),
+    ("$6,000", "Payments and store", "A provider stood up properly, the first cosmetics on sale, and the legal tidying — the name is not trademark-cleared yet."),
+    ("$8,000", "Getting played", "Creators in the roguelite and speedrun communities, and paid tests to find the cheapest channel per player."),
+    ("$2,000", "Buffer", "Because the first number in any plan is the one that was wrong."),
+]
+y = Inches(3.85)
+for amount, name, what in spend:
+    rule(s, y, Inches(5.5))
+    text(s, amount, M, y + Inches(0.12), Inches(1.2), Inches(0.3), size=13, colour=BRASS, font=MONO, bold=True)
+    text(s, name, M + Inches(1.35), y + Inches(0.12), Inches(4.0), Inches(0.3), size=13, colour=TEXT, font=MONO, bold=True)
+    text(s, what, M, y + Inches(0.42), Inches(5.4), Inches(0.6), size=10, colour=DIM, leading=1.2)
+    y += Inches(0.8)
+
+X = M + Inches(6.4)
+text(s, "WHAT YOU GET", X, Inches(3.45), Inches(5), Inches(0.3), size=10, colour=AIR, font=MONO, bold=True, spacing=1.8)
+gets = [
+    ("10% of the company", "From today, not on a milestone. You are early because it is early."),
+    ("First refusal on the next round", "If this works, the round after it is yours to lead before anybody else sees it."),
+    ("A say in what gets built", "Monthly and honest, including the months where the answer is that it did not work."),
+    ("Something that already exists", "Live, tested, server-authoritative. You are not buying a plan to build it."),
+]
+y = Inches(3.85)
+for name, what in gets:
+    rule(s, y, Inches(5.2))
+    text(s, name, X, y + Inches(0.12), Inches(5.1), Inches(0.3), size=13, colour=TEXT, font=MONO, bold=True)
+    text(s, what, X, y + Inches(0.42), Inches(5.1), Inches(0.6), size=10, colour=DIM, leading=1.2)
+    y += Inches(0.8)
+
+text(
+    s,
+    "Buying it outright is a conversation I will have too. The number is different, and I would want to keep building it.",
+    M,
+    Inches(7.05),
+    Inches(11.6),
+    Inches(0.35),
+    size=10,
+    colour=MUTED,
+    font=MONO,
+)
+footer(s)
 
 # Applied here rather than per-slide, so a slide added later cannot miss it.
 for s in prs.slides:
