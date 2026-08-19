@@ -221,6 +221,10 @@ body {
     padding: 0 !important;
     gap: 0 !important;
     justify-content: flex-start !important;
+    /* `min-h-screen` is 100vh, which on a phone means "the screen with the
+       address bar retracted" — taller than what is actually visible, and the
+       difference is a strip of page that scrolls. */
+    min-height: 100svh !important;
   }
   .play-chrome {
     display: none !important;
@@ -230,5 +234,55 @@ body {
     width: 100vw !important;
     height: 100svh !important;
     aspect-ratio: auto !important;
+  }
+
+  /*
+   * Nothing on the play page may scroll the document.
+   *
+   * The stage is exactly the screen, so any document scroll is a few stray
+   * pixels of nothing — but a drag inside the shop was reaching the page and
+   * moving THAT instead of the list, which made the items below the fold
+   * unbuyable. The page is the wrong thing to move; only the list is.
+   *
+   * Scoped with `:has` to the play page alone, because settings and the
+   * leaderboard are long and have every right to scroll.
+   */
+  html:has(.play-shell),
+  body:has(.play-shell) {
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /*
+   * A phone lying down has about 390 pixels of height. The lobby and the shop
+   * were laid out for 720 of them, so the start button alone was four rows of
+   * text tall and sat on top of the writing it was meant to sit under.
+   *
+   * Sized off the viewport rather than at fixed steps: `clamp` keeps a floor a
+   * thumb can still hit, and the middle term scales with the height that is
+   * actually there, so a small phone and a large one each get a button in
+   * proportion to their own screen instead of one drawn for a laptop.
+   */
+  .play-lobby {
+    gap: clamp(0.35rem, 1.6svh, 1.25rem) !important;
+    padding: clamp(0.5rem, 2svh, 1rem) !important;
+  }
+  .play-lobby p {
+    font-size: clamp(0.6rem, 2.6svh, 0.95rem) !important;
+    line-height: 1.25 !important;
+  }
+  /* The verdict line keeps its weight — it is the one sentence on the screen
+     that is worth reading before pressing anything. */
+  .play-lobby .lobby-title {
+    font-size: clamp(0.95rem, 4.6svh, 1.5rem) !important;
+  }
+  .play-lobby .lobby-go {
+    padding: clamp(0.4rem, 1.6svh, 1rem) clamp(1rem, 5svw, 2.5rem) !important;
+    font-size: clamp(0.75rem, 3svh, 1.125rem) !important;
+  }
+  .play-shop {
+    padding: clamp(0.5rem, 2svh, 1.5rem) !important;
+    gap: clamp(0.35rem, 1.5svh, 1rem) !important;
   }
 }

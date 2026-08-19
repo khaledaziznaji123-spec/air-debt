@@ -886,25 +886,42 @@ export default function Game({
               Shop
             </button>
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+            {/* The way out, INSIDE the stage.
+                Home has always been in `.play-chrome` above the canvas, and
+                landscape on a phone hides the chrome to give the game the three
+                hundred and ninety pixels it has — which quietly turned the play
+                page into a room with no door on the only device that needed one.
+                A corner of the stage costs nothing and works everywhere. */}
+            <Link
+              href="/home"
+              className="absolute top-4 right-4 z-10 rounded border border-[#2b3644] bg-[#0b0e14]/80 px-4 py-2 text-sm font-semibold text-[#8a94a6] transition hover:border-[#4ecdc4]/50 hover:text-[#4ecdc4]"
+            >
+              Home
+            </Link>
+
+            <div className="play-lobby absolute inset-0 flex flex-col items-center justify-center gap-5 overflow-y-auto p-4 text-center">
               {lastRun && (
                 <div className="flex flex-col items-center gap-1">
                   <p
                     className={
                       lastRun.outcome === "extracted"
-                        ? "text-2xl font-bold text-[#4ecdc4]"
-                        : "text-2xl font-bold text-[#e8edf5]"
+                        ? "lobby-title text-2xl font-bold text-[#4ecdc4]"
+                        : "lobby-title text-2xl font-bold text-[#e8edf5]"
                     }
                   >
                     {lastRun.outcome === "extracted"
-                      ? "Escaped the dungeon."
+                      ? tutorial
+                        ? "That is the tutorial done."
+                        : "Escaped the dungeon."
                       : lastRun.outcome === "transformed"
                         ? "You breathed the virus."
                         : "You died."}
                   </p>
                   <p className="text-sm text-[#8a94a6]">
                     {lastRun.outcome === "extracted"
-                      ? "Made it out from " + lastRun.depth + "m in."
+                      ? tutorial
+                        ? "Every button in the game, and you used all of them."
+                        : "Made it out from " + lastRun.depth + "m in."
                       : lastRun.outcome === "transformed"
                         ? "The air ran out. You are one of them now."
                         : "Killed in the dungeon. The run's loot stays down there."}
@@ -950,12 +967,35 @@ export default function Game({
                 </div>
               )}
 
-              <button
-                onClick={startRun}
-                className="rounded-lg bg-[#4ecdc4] px-10 py-4 text-lg font-bold text-[#0b0e14] shadow-lg transition hover:brightness-110"
-              >
-                Start the run
-              </button>
+              {/* THE END OF THE TUTORIAL IS THE HOME SCREEN, not the start of
+                  the tutorial. One button did both jobs, so finishing the hall
+                  offered "Start the run" — which in a tutorial run means run the
+                  tutorial again, and with the chrome hidden on a phone there was
+                  nothing else to press. Doing it twice is a choice somebody
+                  might make; it is not the one being offered. */}
+              {tutorial && lastRun ? (
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <Link
+                    href="/home"
+                    className="lobby-go rounded-lg bg-[#4ecdc4] px-10 py-4 text-lg font-bold text-[#0b0e14] shadow-lg transition hover:brightness-110"
+                  >
+                    Back to the home screen
+                  </Link>
+                  <button
+                    onClick={startRun}
+                    className="lobby-go rounded-lg border-2 border-[#2b3644] px-6 py-4 text-sm font-bold text-[#8a94a6] transition hover:border-[#4ecdc4]/50 hover:text-[#4ecdc4]"
+                  >
+                    Again
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={startRun}
+                  className="lobby-go rounded-lg bg-[#4ecdc4] px-10 py-4 text-lg font-bold text-[#0b0e14] shadow-lg transition hover:brightness-110"
+                >
+                  {tutorial ? "Start the tutorial" : "Start the run"}
+                </button>
+              )}
 
               {/* Permanent progress, readable as a fraction of a known whole —
                   PRD FR-2: "I have levered four of eight". */}
@@ -979,6 +1019,19 @@ export default function Game({
               </p>
             </div>
           </>
+        )}
+
+        {/* And during the tutorial itself. There are doors at both ends of the
+            hall, but every station in there is a wall to a player who has not
+            learnt its verb, and somebody beaten by the wall jump is exactly the
+            player least likely to go looking for a door. */}
+        {!renderError && tutorial && !inLobby && !shopOpen && (
+          <Link
+            href="/home"
+            className="absolute top-4 right-4 z-10 rounded border border-[#2b3644] bg-[#0b0e14]/80 px-3 py-1.5 text-xs font-semibold tracking-[0.14em] text-[#8a94a6] uppercase transition hover:border-[#4ecdc4]/50 hover:text-[#4ecdc4]"
+          >
+            Leave
+          </Link>
         )}
 
         {!renderError && shopOpen && (

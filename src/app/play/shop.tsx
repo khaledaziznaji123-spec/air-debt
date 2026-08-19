@@ -290,7 +290,7 @@ export default function Shop({
   const [tab, setTab] = useState<ShopCategory>("gear");
 
   return (
-    <div className="absolute inset-0 flex flex-col gap-4 overflow-hidden rounded-lg bg-shop-bg p-6">
+    <div className="play-shop absolute inset-0 flex flex-col gap-4 overflow-hidden rounded-lg bg-shop-bg p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={onClose}
@@ -346,7 +346,17 @@ export default function Shop({
         {CATEGORIES.find((c) => c.key === tab)?.hint}
       </p>
 
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+      {/* `min-h-0` is the whole reason this scrolls.
+          A flex child defaults to `min-height: auto`, which means "at least as
+          tall as my content" — so `flex-1` plus `overflow-y-auto` grew the list
+          to the height of every card instead of scrolling it, and the parent's
+          `overflow-hidden` simply cut the rest off. On a desktop the stage was
+          tall enough to hide the bug. On a phone lying down it meant the items
+          below the fold could not be reached at all, and a drag scrolled the
+          PAGE, because the only thing on the screen that could scroll was the
+          document. `overscroll-contain` stops that chaining even when the list
+          is already at its end. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pr-1">
         {SHOP.map((item, index) =>
           item.category !== tab ? null : (
             <Card
