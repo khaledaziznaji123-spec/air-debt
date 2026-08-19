@@ -51,4 +51,77 @@ test.describe("on a phone", () => {
     // that a phone on its side does not have to spare.
     await expect(page.locator(".play-chrome")).toBeHidden();
   });
+
+  test("the pad can be arranged, and where it is dragged is where it stays", async ({
+    page,
+  }) => {
+    // Sideways first: the arranger puts the buttons where they will really be,
+    // and where they will really be depends on the shape of the screen.
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/settings");
+
+    await page.getByRole("button", { name: /arrange on screen/i }).click();
+    const jump = page.getByRole("button", { name: /^jump/ });
+    await expect(jump).toBeVisible();
+
+    const before = await jump.boundingBox();
+    if (!before) throw new Error("the jump button has no box to drag");
+
+    // A real press-move-release rather than `dragTo`, because the arranger is
+    // built on pointer capture — the thing that lets a thumb keep dragging a
+    // button after it has slid off it.
+    await page.mouse.move(
+      before.x + before.width / 2,
+      before.y + before.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(420, 150, { steps: 8 });
+    await page.mouse.up();
+
+    const after = await jump.boundingBox();
+    expect(after, "the button did not move").not.toEqual(before);
+
+    await page.getByRole("button", { name: /^done$/i }).click();
+    await expect(page.getByRole("button", { name: /^jump/ })).toHaveCount(0);
+
+    // Saved as it goes, and saved on the device — a layout that vanished on
+    // reload would be worse than not being arrangeable at all.
+    await page.reload();
+    const stored = await page.evaluate(() =>
+      window.localStorage.getItem("airdebt.touch.v1"),
+    );
+    expect(stored, "the arrangement was not kept").toBeTruthy();
+    expect(JSON.parse(stored!).slots.jump.side).toBe("left");
+  });
+
+  test("resetting the pad puts every button back", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/settings");
+    await page.evaluate(() =>
+      window.localStorage.setItem(
+        "airdebt.touch.v1",
+        JSON.stringify({
+          scale: 1.5,
+          opacity: 0.3,
+          slots: { jump: { side: "left", x: 300, y: 200, size: 130 } },
+        }),
+      ),
+    );
+    await page.reload();
+
+    // A stored file missing eight of the nine buttons is read as eight
+    // defaults rather than eight missing buttons — the pad is driven by the
+    // control list, never by what happened to be in storage.
+    await page.getByRole("button", { name: /arrange on screen/i }).click();
+    await expect(page.getByRole("button", { name: / — drag to move$/ })).toHaveCount(
+      9,
+    );
+
+    await page.getByRole("button", { name: /^reset$/i }).click();
+    await page.getByRole("button", { name: /^done$/i }).click();
+    const cleared = await page.evaluate(() =>
+      window.localStorage.getItem("airdebt.touch.v1"),
+    );
+    expect(cleared, "reset left the old layout behind").toBeNull();
+  });
 });

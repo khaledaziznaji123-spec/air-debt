@@ -24,6 +24,7 @@ import {
 import { KeyboardInput } from "@/render/keyboard";
 import { readBindings } from "../keybinds";
 import { TouchInput, hasTouch } from "@/render/touch";
+import { readTouchLayout } from "../touch-layout.ts";
 import { readPrefs } from "../prefs";
 import { Renderer } from "@/render/renderer";
 import { GameAudio } from "@/render/audio";
@@ -339,6 +340,22 @@ export default function Game({
   }, [inLobby]);
 
   /**
+   * Whether the on-screen pad should be on screen.
+   *
+   * Every state that draws a panel over the game takes it away: the hub, the
+   * shop, the revive prompt, the render error. The rule is not "is there a run"
+   * but "is a thumb steering anything right now" — in all four of those it is
+   * not, and the pad would only be in the way of the thing that is.
+   *
+   * A ref rather than a prop because the run loop is where it is read, and the
+   * run loop is not re-created when a panel opens.
+   */
+  const padRef = useRef(false);
+  useEffect(() => {
+    padRef.current = !inLobby && !shopOpen && !pendingDeath && !renderError;
+  }, [inLobby, shopOpen, pendingDeath, renderError]);
+
+  /**
    * Which shortcuts this player has levered (PRD FR-3.3).
    *
    * Permanent progress, so it outlives the run — and deliberately outlives a
@@ -403,7 +420,7 @@ export default function Game({
      * keyboard below — so a laptop is completely unaffected by any of it, and a
      * tablet with a keyboard attached can use either.
      */
-    const touch = hasTouch() && host ? new TouchInput(host) : null;
+    const touch = hasTouch() && host ? new TouchInput(host, readTouchLayout()) : null;
 
     /**
      * Sound. Suspended until a gesture resumes it, because every browser blocks
@@ -421,6 +438,10 @@ export default function Game({
       audio.setMuted(now.muted);
     };
     window.addEventListener("airdebt-prefs", onPrefs);
+    // Same reasoning for the pad: a size slider you have to restart a run to
+    // feel is a size slider nobody trusts.
+    const onTouch = () => touch?.apply(readTouchLayout());
+    window.addEventListener("airdebt-touch", onTouch);
     // The camera is the renderer's, and sound needs it to know what is nearby.
     const cameraOf = (r: Renderer | null) => (r ? r.cameraLeft() : 0);
     // The replay log every run accumulates (PRD FR-15.5). Not yet submitted —
@@ -483,6 +504,13 @@ export default function Game({
       const frame = (nowMs: number) => {
         if (disposed) return;
         raf = requestAnimationFrame(frame);
+
+        // The pad covers the whole play area, so anywhere it is not being used
+        // it is nine transparent circles sitting on top of what the player came
+        // to press — the shop worst of all. Driven from the loop rather than
+        // from an effect because the loop already holds the truth about whether
+        // a run is running; `setVisible` is a no-op unless it changed.
+        touch?.setVisible(padRef.current);
 
         if (lastFrameMs === 0) lastFrameMs = nowMs;
         accumulator += nowMs - lastFrameMs;
@@ -690,6 +718,7 @@ export default function Game({
       cancelAnimationFrame(raf);
       input.detach();
       window.removeEventListener("airdebt-prefs", onPrefs);
+      window.removeEventListener("airdebt-touch", onTouch);
       touch?.destroy();
       audio.destroy();
       renderer?.destroy();

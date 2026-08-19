@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AdminBox from "./admin-box";
 import ControlsBox from "./controls-box";
+import TouchBox from "./touch-box";
 import ViewBox from "./view-box";
 
 export const metadata = { title: "Air Debt — settings" };
@@ -8,17 +9,18 @@ export const metadata = { title: "Air Debt — settings" };
 /**
  * Settings.
  *
- * Keys, and the developer switch.
+ * Keys, thumbs, sound, display, and the developer switch.
  *
  * The keymap is the real one: PRD FR-9.2 asks for bindings to be fully
  * rebindable, and the keyboard module has always taken them as an argument — the
  * only missing piece was somewhere to change one. It doubles as the controls
- * reference that used to sit under the game canvas.
+ * reference that used to sit under the game canvas. The pad below it is the same
+ * idea for a device with no keys.
  *
- * Still not here, and still not listed as "coming soon": volume, because there
- * is no audio in the game at all, and resolution, because the canvas is a fixed
- * internal size stretched to fit. Both would be greyed-out lies on a screen that
- * has had enough of those.
+ * The bar this page is held to: every control on it does something. Volume could
+ * not be written until there was sound, and the pad could not be arranged until
+ * there was a pad. Resolution is still missing, because the canvas is a fixed
+ * internal size stretched to fit — a greyed-out promise is worse than a gap.
  */
 export default function SettingsPage() {
   return (
@@ -36,6 +38,8 @@ export default function SettingsPage() {
         </h1>
 
         <ControlsBox />
+
+        <TouchBox />
 
         <ViewBox />
 
@@ -61,9 +65,9 @@ export default function SettingsPage() {
         <AdminBox />
 
         <p className="text-xs leading-relaxed text-foreground/40">
-          There is no sound in the game yet, so there is no volume here. The
-          canvas is a fixed size stretched to your window, so there is no
-          resolution either. Both will appear when they are real.
+          There is no resolution setting: the game is drawn at a fixed size and
+          stretched to your window, so there is nothing here to change. It will
+          appear when it is real, like the rest of this page did.
         </p>
       </div>
     </main>
