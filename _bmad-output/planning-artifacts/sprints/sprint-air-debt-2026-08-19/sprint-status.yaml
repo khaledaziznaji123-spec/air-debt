@@ -1,0 +1,224 @@
+# Sprint status — Air Debt
+#
+# Written 2026-08-19 from the git history and the built product, not kept as the
+# work happened. The sprint-planning pass was skipped along with epics and UX:
+# development ran straight from the PRD and the architecture spine.
+#
+# So sprints 1 to 6 are a reconstruction — the dates are real, taken from the
+# commits, and the boundaries are drawn where the work actually changed shape.
+# Sprint 7 onward is a plan rather than a record, and is marked as one.
+#
+# Stories reference _bmad-output/planning-artifacts/epics/epics-air-debt-2026-08-19/epics.md
+
+project: Air Debt
+repository: khaledaziznaji123-spec/air-debt
+live: https://air-debt-game.vercel.app
+team_size: 1
+cadence: continuous, not timeboxed
+written: 2026-08-19
+authored_from: git history and the codebase
+
+health:
+  unit_tests: 298
+  browser_tests: 27
+  typecheck: clean
+  lint: clean
+  build: clean
+  last_verified: 2026-08-19
+
+# ---------------------------------------------------------------- reconstructed
+sprints:
+  - id: 1
+    name: Planning
+    dates: 2026-08-03 .. 2026-08-04
+    status: done
+    goal: Decide what the game is before writing it, and what it may never become.
+    stories: [BMAD product brief, BMAD PRD + addendum, BMAD architecture spine]
+    delivered:
+      - The core loop, the timer as oxygen, and the 70% rule fixed as decisions
+      - PixiJS-as-view-layer chosen; Phaser rejected because it pulls simulation
+        state into the engine and forecloses replay validation
+      - Zero fixed infrastructure cost set as a constraint
+    note: >
+      The UX and epics passes were skipped here. The reasoning they would have
+      recorded went into code comments instead, which is why a change that
+      contradicts one fails the tests rather than a document review.
+
+  - id: 2
+    name: The simulation
+    dates: 2026-08-04 .. 2026-08-07
+    status: done
+    goal: A pure reducer that plays the same way twice, on any machine.
+    epics: [1, 2]
+    delivered:
+      - step(state, intents) at a fixed 60Hz, no randomness anywhere
+      - Intents vocabulary; the core never learns what a key is
+      - PixiJS renderer as a pure view layer
+      - Determinism guard in ESLint over src/sim and src/config
+
+  - id: 3
+    name: The dungeon and the fight
+    dates: 2026-08-07 .. 2026-08-11
+    status: done
+    goal: Five environments, twelve enemies, and combat that rewards defence.
+    epics: [3, 4]
+    delivered:
+      - Parkour, poison, water, rock, fire — hardest last
+      - Swimming, diving, breath pockets
+      - 0.3s parry, 0.4s punish, stun as the only guard-breaker
+      - Final boss with phases
+      - Eight shortcuts, each behind a lever placed past the ground it skips
+
+  - id: 4
+    name: Economy and shop
+    dates: 2026-08-11 .. 2026-08-13
+    status: done
+    goal: Loot worth carrying, and a reason walking home is a decision.
+    epics: [5]
+    delivered:
+      - Two currencies, thirty shop items, the 70% rule enforced per grade
+      - Air tank upgrades to a ceiling that is deliberately insufficient
+      - v1 declared complete 2026-08-13
+
+  - id: 5
+    name: Accounts, server authority and leaderboards
+    dates: 2026-08-13 .. 2026-08-16
+    status: done
+    goal: Make a score mean something, and make the economy unforgeable.
+    epics: [6, 7]
+    delivered:
+      - Supabase auth, RLS, service-key-only writes
+      - Server issues the seed and times the run before a tick is played
+      - Replay verification — the client submits keystrokes, never a score
+      - Two boards, all-time and weekly; ranked mode
+      - Deployed to Vercel, auto-deploying from main
+    closed_holes:
+      - bank() accepted client-claimed loot with no run id — deleted, not patched
+      - replay() filled gaps with Intent.None while the client logs on change,
+        which would have rejected every honest submission as a forgery
+
+  - id: 6
+    name: The tutorial, settings, audio and the phone
+    dates: 2026-08-16 .. 2026-08-19
+    status: done
+    goal: Make it learnable, hearable, and openable on a phone.
+    epics: [8, 9, 10, 11]
+    delivered:
+      - A tutorial hall with a station per verb, leavable at any point
+      - Rebindable keys, volume, display switches
+      - Every sound synthesised at play time, per-monster voices, parry telegraphs
+      - Touch controls, arrangeable per device; rotate prompt; pad hidden outside a run
+      - Support page with FAQs and a working contact form
+      - Privacy page; change password from inside the account
+      - Investor deck and landing page
+
+# --------------------------------------------------------------------- planned
+  - id: 7
+    name: After the pitch
+    dates: 2026-08-21 .. TBD
+    status: planned
+    goal: Close the gaps the assignment brief and the pitch both exposed.
+    stories:
+      - id: 7.1
+        title: Connect the GitHub MCP server
+        status: todo
+        size: XS
+        why: An explicit requirement, and the only tool condition not yet met.
+      - id: 7.2
+        title: Run migration 0005_messages.sql on the live database
+        status: todo
+        size: XS
+        why: The support form is deployed; the table it writes to must exist.
+      - id: 7.3
+        title: Add RESEND_API_KEY so support messages are emailed as well as stored
+        status: todo
+        size: XS
+      - id: 7.4
+        title: Seed both leaderboards with real ranked runs
+        status: todo
+        size: S
+        why: An empty board reads as broken rather than as new.
+      - id: 7.5
+        title: Colourblind support for the brass-vs-lens distinction
+        status: todo
+        size: S
+        why: The one meaning in the game carried by colour alone.
+
+  - id: 8
+    name: 1v1
+    dates: TBD
+    status: planned
+    epics: [13]
+    goal: Turn the extraction decision into a decision about another person.
+    stories:
+      - id: 8.1
+        title: Netcode over the existing deterministic core
+        status: todo
+        size: L
+        note: The determinism that makes replays verify is the same property
+              that makes lockstep possible. This is why it is an addition.
+      - id: 8.2
+        title: Matchmaking and lobbies
+        status: todo
+        size: M
+      - id: 8.3
+        title: Interference rules
+        status: todo
+        size: M
+      - id: 8.4
+        title: Ranked ladder reusing replay verification
+        status: todo
+        size: S
+
+  - id: 9
+    name: Monetisation
+    dates: TBD
+    status: planned
+    epics: [12]
+    goal: Charge for something, on top of an economy that is already honest.
+    depends_on: sprint 8
+    stories:
+      - id: 9.1
+        title: Payment provider and checkout
+        status: todo
+        size: M
+      - id: 9.2
+        title: Paid cosmetics
+        status: todo
+        size: S
+      - id: 9.3
+        title: Ranked seasons and a season pass
+        status: todo
+        size: M
+      - id: 9.4
+        title: Trademark clearance for the name "Air Debt"
+        status: todo
+        size: S
+        why: Screened against Steam and itch.io with no collisions, but not
+             cleared. Must happen before any spend on brand or store listing.
+
+  - id: 10
+    name: Survival, and mobile designed for mobile
+    dates: TBD
+    status: planned
+    epics: [10, 14, 15]
+
+risks:
+  - risk: One person builds, designs, tests and pitches all of it.
+    impact: high
+    mitigation: >
+      The ask is priced at what it costs to stop being one person. Until then,
+      the tests are the second pair of eyes — 298 unit and 27 browser tests, run
+      as separate steps after two commits went out on a chained command that
+      hid a failure.
+  - risk: Mobile plays worse than the keyboard and is now public.
+    impact: medium
+    mitigation: >
+      Named as early everywhere it appears — the deck, the README, the FAQ — and
+      scheduled after 1v1 as a design job rather than a tuning job.
+  - risk: The name is not trademark-cleared.
+    impact: medium
+    mitigation: Budgeted in sprint 9, before any brand spend.
+  - risk: Empty leaderboards in front of an audience.
+    impact: low
+    mitigation: Sprint 7.4, before the next demo.

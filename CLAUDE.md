@@ -23,14 +23,19 @@ historical; the project is Air Debt.
 
 ## Method
 
-**BMAD.** Completed: product brief, PRD, architecture.
+**BMAD.** All six passes now have artifacts: product brief, PRD, architecture,
+UX (`ux/ux-air-debt-2026-08-19/`), epics (`epics/epics-air-debt-2026-08-19/`)
+and sprint status (`sprints/sprint-air-debt-2026-08-19/`).
 
-Development then ran ahead of the method — the sim, the renderer and the run
-loop were built straight from the PRD and the architecture spine, without the UX
-and epics/stories passes in between. Worth knowing rather than tidying away: the
-reasoning those passes would have recorded lives in the code as comments
-instead, so a change that contradicts one will not fail a document review. It
-will only fail the tests, and only where a test exists.
+The order is worth knowing rather than tidying away. The first three were
+written before the build; the last three were written on 2026-08-19 FROM the
+build, because development ran ahead of the method — the sim, the renderer and
+the run loop were built straight from the PRD and the architecture spine. Each
+of those three says so at the top. They are a description of what exists and a
+place to put the next piece of work, not a plan that was followed, and the
+reasoning they would have recorded up front lives in the code as comments
+instead. A change that contradicts one will not fail a document review; it will
+only fail the tests, and only where a test exists.
 
 ## Decisions already made — do not relitigate
 
