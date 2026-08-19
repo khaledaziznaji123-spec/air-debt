@@ -127,10 +127,12 @@ export default function TouchBox() {
       </div>
 
       <p className="text-xs leading-relaxed text-foreground/40">
-        Arranging opens the pad full screen so you can drag each button to where
-        your thumb actually falls, and size them one at a time. Do it on the
-        device you play on and turn it sideways first — the layout is saved on
-        that device, so a phone and a tablet can each have their own.
+        The slider above sizes every button at once. To size ONE, open the
+        arranger and tap that button — the middle slider then belongs to it
+        alone, and shows its face so you can see which one you are holding.
+        Dragging a button moves it. Do it on the device you play on and turn it
+        sideways first: the layout is saved on that device, so a phone and a
+        tablet can each have their own.
       </p>
 
       {arranging && (

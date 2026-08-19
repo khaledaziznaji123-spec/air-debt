@@ -126,8 +126,7 @@ export default function ArrangePad({
   };
 
   const chosen = layout.slots[selected];
-  const chosenName =
-    CONTROLS.find((c) => c.id === selected)?.hint ?? "this button";
+  const chosenControl = CONTROLS.find((c) => c.id === selected);
 
   return (
     <div
@@ -153,7 +152,7 @@ export default function ArrangePad({
         <div className="pointer-events-auto flex w-full max-w-lg flex-col gap-3 rounded-2xl border-2 border-rock-edge bg-[#0b0e14]/95 p-3">
           <div className="flex items-center justify-between gap-3">
             <span className="font-mono text-[10px] font-black tracking-[0.18em] text-brass uppercase">
-              Drag a button to move it
+              Drag to move · Tap to size one
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -184,7 +183,8 @@ export default function ArrangePad({
           />
 
           <Slider
-            name={chosenName}
+            name={`Only ${chosenControl?.name ?? "this"}`}
+            glyph={chosenControl?.label}
             value={chosen?.size ?? DEFAULT_LAYOUT.slots.jump.size}
             min={LIMITS.size.min}
             max={LIMITS.size.max}
@@ -256,6 +256,7 @@ export default function ArrangePad({
 
 function Slider({
   name,
+  glyph,
   value,
   min,
   max,
@@ -264,6 +265,8 @@ function Slider({
   onChange,
 }: {
   name: string;
+  /** The face of the button this slider is holding, if it is holding one. */
+  glyph?: string;
   value: number;
   min: number;
   max: number;
@@ -273,8 +276,13 @@ function Slider({
 }) {
   return (
     <label className="flex items-center gap-3">
-      <span className="w-24 shrink-0 truncate text-xs text-foreground/70 capitalize">
-        {name}
+      <span className="flex w-24 shrink-0 items-center gap-1.5 text-xs text-foreground/70">
+        {glyph && (
+          <span className="font-mono text-sm text-[#5fd9cf]" aria-hidden>
+            {glyph}
+          </span>
+        )}
+        <span className="truncate">{name}</span>
       </span>
       <input
         type="range"

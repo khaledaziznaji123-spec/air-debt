@@ -29,6 +29,8 @@ export type Control = {
   id: string;
   intent: IntentFlag;
   label: string;
+  /** One word, for a place that has room for one word. */
+  name: string;
   hint: string;
 };
 
@@ -83,15 +85,15 @@ const ROW1 = EDGE + BIG + GAP;
  * All of which is an opinion, and the arranger exists because it is only mine.
  */
 export const CONTROLS: Control[] = [
-  { id: "left", intent: Intent.Left, label: "◀", hint: "left" },
-  { id: "right", intent: Intent.Right, label: "▶", hint: "right" },
-  { id: "crouch", intent: Intent.Crouch, label: "▼", hint: "crouch and dive" },
-  { id: "jump", intent: Intent.Jump, label: "▲", hint: "jump" },
-  { id: "attack", intent: Intent.Attack, label: "⚔", hint: "attack" },
-  { id: "block", intent: Intent.Block, label: "◆", hint: "block and parry" },
-  { id: "slide", intent: Intent.Slide, label: "»", hint: "slide" },
-  { id: "stun", intent: Intent.Stun, label: "✷", hint: "stun" },
-  { id: "interact", intent: Intent.Interact, label: "E", hint: "levers and chests" },
+  { id: "left", name: "Left", intent: Intent.Left, label: "◀", hint: "left" },
+  { id: "right", name: "Right", intent: Intent.Right, label: "▶", hint: "right" },
+  { id: "crouch", name: "Crouch", intent: Intent.Crouch, label: "▼", hint: "crouch and dive" },
+  { id: "jump", name: "Jump", intent: Intent.Jump, label: "▲", hint: "jump" },
+  { id: "attack", name: "Attack", intent: Intent.Attack, label: "⚔", hint: "attack" },
+  { id: "block", name: "Block", intent: Intent.Block, label: "◆", hint: "block and parry" },
+  { id: "slide", name: "Slide", intent: Intent.Slide, label: "»", hint: "slide" },
+  { id: "stun", name: "Stun", intent: Intent.Stun, label: "✷", hint: "stun" },
+  { id: "interact", name: "Interact", intent: Intent.Interact, label: "E", hint: "levers and chests" },
 ];
 
 export const DEFAULT_SLOTS: Record<string, Slot> = {

@@ -94,6 +94,32 @@ test.describe("on a phone", () => {
     expect(JSON.parse(stored!).slots.jump.side).toBe("left");
   });
 
+  test("sizing one button sizes only that button", async ({ page }) => {
+    // The control existed from the start and was invisible: a slider labelled
+    // with the selected button's name, which nobody reads as "tap a button
+    // first". What is asserted is that the label follows the selection, because
+    // that label is the entire discovery mechanism.
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/settings");
+    await page.getByRole("button", { name: /arrange on screen/i }).click();
+
+    await expect(page.getByRole("slider", { name: /^only jump$/i })).toBeVisible();
+
+    const attack = page.getByRole("button", { name: /^attack/ });
+    const before = await attack.boundingBox();
+    await attack.click();
+    const only = page.getByRole("slider", { name: /^only attack$/i });
+    await expect(only).toBeVisible();
+
+    // Bigger, and only this one: the button next to it must not move a pixel.
+    const jumpBefore = await page.getByRole("button", { name: /^jump/ }).boundingBox();
+    await only.fill("120");
+    const after = await attack.boundingBox();
+    const jumpAfter = await page.getByRole("button", { name: /^jump/ }).boundingBox();
+    expect(after!.width).toBeGreaterThan(before!.width);
+    expect(jumpAfter!.width).toBe(jumpBefore!.width);
+  });
+
   test("resetting the pad puts every button back", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/settings");
