@@ -131,14 +131,21 @@ export async function send(
   if (error) return { ok: false, error: "The message could not be saved." };
 
   // Best effort, and never the reason the sender is told it failed — the
-  // message is already recorded by the time this runs.
-  await notify({ name, email, body }).catch(() => {});
+  // message is already recorded by the time this runs. Logged loudly all the
+  // same: swallowing it silently was right for the sender and useless for the
+  // person wondering why no mail arrived.
+  await notify({ name, email, body }).catch((e) => {
+    console.error("[support] the message was saved but not emailed:", e);
+  });
   return { ok: true };
 }
 
 async function notify(m: { name: string; email: string; body: string }) {
-  if (!RESEND) return;
-  await fetch("https://api.resend.com/emails", {
+  if (!RESEND) {
+    console.warn("[support] RESEND_API_KEY is not set — message saved, not emailed.");
+    return;
+  }
+  const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       authorization: `Bearer ${RESEND}`,
@@ -154,4 +161,14 @@ async function notify(m: { name: string; email: string; body: string }) {
       text: `${m.name} <${m.email}>\n\n${m.body}`,
     }),
   });
+  // Resend answers a refusal with 4xx and a JSON reason, and `fetch` does not
+  // throw on one — so without this the likeliest failure of all was invisible
+  // on both sides: a Resend account with no verified domain may only send to
+  // the address it was registered with.
+  if (!res.ok) {
+    console.error(
+      `[support] Resend refused the message (${res.status}):`,
+      await res.text().catch(() => "no body"),
+    );
+  }
 }
