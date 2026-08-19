@@ -145,8 +145,11 @@ is worse than never having written it.
 - **No PvP and no Survival.** Both are drawn on the home screen and marked SOON
   rather than hidden, so a player can see the shape of the game. Nothing is
   behind either. PvP needs live connections that do not exist yet.
-- **Keyboard only.** No touch controls, so the game does not work on a phone.
-  Web first as validation, native app later — but that is a plan, not a build.
+- **Touch controls are new and barely played.** On-screen buttons exist and
+  produce the same intents the keyboard does, so a phone can play — but they were
+  built in one sitting and have not had a real device put through a full run. The
+  game asks to be turned to landscape, because the playfield is a fixed 16:9 and
+  reflowing it would mean a different game on a different device.
 - **No music.** There is sound — every noise synthesised at the moment it plays,
   no audio files anywhere — and an ambience bed per environment, but nothing
   written. A dungeon with a tune in it is a different game and the oxygen clock

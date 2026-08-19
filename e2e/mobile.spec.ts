@@ -30,8 +30,25 @@ test.describe("on a phone", () => {
     });
   }
 
-  test("/play says something useful rather than showing a broken game", async ({ page }) => {
+  test("/play renders and asks to be turned when held upright", async ({ page }) => {
     await page.goto("/play");
     await expect(page.locator("body")).toBeVisible();
+    // The nudge is CSS-only, on `(orientation: portrait) and (pointer: coarse)`,
+    // so what is asserted is that it is in the document and actually displayed
+    // at this size — a rule that silently does not match is the failure mode.
+    const nudge = page.locator(".rotate-nudge");
+    await expect(nudge).toHaveCount(1);
+    await expect(nudge).toBeVisible();
+  });
+
+  test("in landscape the nudge goes away and the stage takes the screen", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/play");
+    await expect(page.locator(".rotate-nudge")).toBeHidden();
+    // The chrome above the canvas is three hundred and ninety pixels of height
+    // that a phone on its side does not have to spare.
+    await expect(page.locator(".play-chrome")).toBeHidden();
   });
 });

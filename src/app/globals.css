@@ -176,3 +176,59 @@ body {
     animation: none;
   }
 }
+
+
+/*
+ * Phone play.
+ *
+ * Two rules, both about the one thing a phone has least of: room.
+ *
+ * The game is a fixed 16:9 canvas, so on a portrait phone it is a postage stamp
+ * with the whole screen empty above and below it. Rather than reflow the game —
+ * which would mean a different playfield on a different device, and a run that
+ * no longer replays the same way — the page asks to be turned. `pointer: coarse`
+ * so it only ever appears on something being touched; a narrow desktop window is
+ * not a phone and should not be nagged.
+ */
+.rotate-nudge {
+  display: none;
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-nudge {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+    background: #0b0e14;
+  }
+}
+
+/*
+ * And in landscape, the chrome goes. A phone on its side has about three
+ * hundred and ninety pixels of height for a game that wants as many of them as
+ * it can get, so the page padding and the row of badges above the canvas are
+ * spending something there is none of.
+ */
+@media (orientation: landscape) and (pointer: coarse) {
+  .play-shell {
+    padding: 0 !important;
+    gap: 0 !important;
+    justify-content: flex-start !important;
+  }
+  .play-chrome {
+    display: none !important;
+  }
+  .play-stage {
+    max-width: none !important;
+    width: 100vw !important;
+    height: 100svh !important;
+    aspect-ratio: auto !important;
+  }
+}

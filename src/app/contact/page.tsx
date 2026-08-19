@@ -65,12 +65,20 @@ export default function ContactPage() {
         >
           ← Home
         </Link>
-        <Link
-          href="/"
-          className="text-xs font-semibold tracking-[0.16em] text-[#6b7a89] uppercase transition-colors hover:text-[#e7ecf2]"
-        >
-          About the game
-        </Link>
+        <div className="flex items-center gap-5">
+          <Link
+            href="/privacy"
+            className="text-xs font-semibold tracking-[0.16em] text-[#6b7a89] uppercase transition-colors hover:text-[#e7ecf2]"
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/"
+            className="text-xs font-semibold tracking-[0.16em] text-[#6b7a89] uppercase transition-colors hover:text-[#e7ecf2]"
+          >
+            About the game
+          </Link>
+        </div>
       </div>
 
       <div>

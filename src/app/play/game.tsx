@@ -23,6 +23,7 @@ import {
 } from "@/sim";
 import { KeyboardInput } from "@/render/keyboard";
 import { readBindings } from "../keybinds";
+import { TouchInput, hasTouch } from "@/render/touch";
 import { readPrefs } from "../prefs";
 import { Renderer } from "@/render/renderer";
 import { GameAudio } from "@/render/audio";
@@ -396,6 +397,15 @@ export default function Game({
     const input = new KeyboardInput(readBindings());
 
     /**
+     * On-screen controls, on devices that have a thumb instead of a keyboard.
+     *
+     * A SEPARATE SOURCE producing the same intents (ARCH AD-6), OR'd with the
+     * keyboard below — so a laptop is completely unaffected by any of it, and a
+     * tablet with a keyboard attached can use either.
+     */
+    const touch = hasTouch() && host ? new TouchInput(host) : null;
+
+    /**
      * Sound. Suspended until a gesture resumes it, because every browser blocks
      * audio that starts on its own — and pressing Play is that gesture.
      */
@@ -485,7 +495,13 @@ export default function Game({
         ) {
           // In the hub the character stands still: input is ignored until the
           // run is actually started.
-          const intents = inLobbyRef.current ? 0 : input.read();
+          // Both sources, every tick. The bitwise OR is the whole integration:
+          // two devices, one vocabulary, and the simulation cannot tell which
+          // one a run was played on — which is also why a replay of a phone run
+          // verifies identically to a keyboard one.
+          const intents = inLobbyRef.current
+            ? 0
+            : ((input.read() | (touch?.read() ?? 0)) as typeof state.previousIntents);
           // Recorded only on CHANGE, which is also the shape the replay expects:
           // a gap in the log means "still holding the same keys". A full entry
           // per tick would be seventy-two thousand of them for a long run.
@@ -674,6 +690,7 @@ export default function Game({
       cancelAnimationFrame(raf);
       input.detach();
       window.removeEventListener("airdebt-prefs", onPrefs);
+      touch?.destroy();
       audio.destroy();
       renderer?.destroy();
       // A no-op once `destroy` has removed it, but the renderer may never have
@@ -705,7 +722,7 @@ export default function Game({
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#0b0e14] p-6">
+    <div className="play-shell flex min-h-screen flex-col items-center justify-center gap-4 bg-[#0b0e14] p-6">
       {/* What the server said, when it disagreed with what the screen showed.
           Rare by design — it means a purchase was refused or a run's haul was
           trimmed — and silent failure there would be far worse than a line of
@@ -727,7 +744,7 @@ export default function Game({
 
       {/* The way out. Without it the only route back to the menu is the browser
           chrome, which is not a thing a game should make anyone reach for. */}
-      <div className="flex w-full max-w-[1280px] items-center gap-3">
+      <div className="play-chrome flex w-full max-w-[1280px] items-center gap-3">
         <Link
           href="/home"
           className="rounded-full border border-[#2b3644] px-4 py-1.5 text-xs font-semibold tracking-[0.16em] text-[#8a94a6] uppercase transition-colors hover:border-[#4ecdc4]/50 hover:text-[#4ecdc4]"
@@ -759,7 +776,7 @@ export default function Game({
           </Link>
         )}
       </div>
-      <div className="relative w-full max-w-[1280px] aspect-[16/9]">
+      <div className="play-stage relative w-full max-w-[1280px] aspect-[16/9]">
         <div
           ref={hostRef}
           className="absolute inset-0 overflow-hidden rounded-lg"
