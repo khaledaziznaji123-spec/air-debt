@@ -156,9 +156,23 @@ export default function ContactForm() {
         >
           {sending ? "Sending…" : "Send"}
         </button>
-        <span className="text-xs text-[#5a6875]">
-          {body.length > 0 && `${body.length} / 4000`}
-        </span>
+        {/* Only once it is worth knowing about.
+            It used to appear on the first keystroke, which is a number counting
+            up next to somebody's sentence for no reason they can see — the
+            first question it gets asked is "what is that", and a control whose
+            first question is "what is that" is doing harm. A limit nobody is
+            near is not information. */}
+        {body.length > 3200 && (
+          <span
+            className={
+              body.length >= 4000
+                ? "text-xs font-semibold text-[#e56b6f]"
+                : "text-xs text-[#8a94a6]"
+            }
+          >
+            {4000 - body.length} characters left
+          </span>
+        )}
       </div>
     </form>
   );
