@@ -530,7 +530,7 @@ text(
 gaps = [
     ("NOT BUILT", WARN, "Monetisation", "No payment provider, no checkout. The economy it would sell into is finished and server-owned — which had to be right first, because selling currency on top of an economy the client controls is selling something you do not own."),
     ("NOT BUILT", WARN, "PvP and Survival", "Both are on the menu and marked as coming, so a player can see the shape of the game. Nothing is behind either."),
-    ("NOT BUILT", WARN, "Mobile", "Keyboard only. Web first as validation, native after — but that is a plan, not a build."),
+    ("EARLY", BRASS, "Phone", "It plays on one — turned sideways, with on-screen controls you can arrange. Days old and barely played. A native app is still a plan, not a build."),
     ("EARLY", BRASS, "Players", "It went live this week. The runs on the leaderboard are real, and there are not many of them."),
 ]
 y = Inches(3.5)

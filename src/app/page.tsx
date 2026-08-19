@@ -133,7 +133,7 @@ export default function Landing() {
           </a>
 
           <p className="mt-8 font-mono text-xs tracking-widest text-[#5a6875]">
-            FREE · IN YOUR BROWSER · KEYBOARD ONLY
+            FREE · IN YOUR BROWSER · KEYBOARD OR PHONE
           </p>
         </div>
       </section>
@@ -197,9 +197,10 @@ export default function Landing() {
             Thirty seconds is not very long.
           </h2>
           <p className="mt-4 text-pretty text-[#9fb0c0]">
-            Free, in the browser, no download. An account keeps what you carry
-            out — the shortcuts you open are permanent, and they are the only way
-            the maths ever works.
+            Free, in the browser, no download. It plays on a phone too — turn it
+            sideways and the controls appear under your thumbs. An account keeps
+            what you carry out: the shortcuts you open are permanent, and they
+            are the only way the maths ever works.
           </p>
           {/* A flex container, not a plain div.
               The form inside is `w-full max-w-md` with no automatic margins, so
