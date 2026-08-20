@@ -360,6 +360,58 @@ for tag, name, why in who:
     y += Inches(0.7)
 footer(s)
 
+# ================================================================== the market
+# NUMBERS, AND WHOSE NUMBERS THEY ARE.
+# Every figure on this slide is sourced and the source is printed on it. An
+# unattributed number in a pitch is a number the room has to take on trust, and
+# the one thing this whole deck argues is that trust should not be necessary.
+s = slide(prs, "The market", BRASS)
+heading(s, "The audience is counted, and it is\nalready spending.")
+
+text(s, "THEY BUY THIS EXACT LOOP", M, Inches(2.5), Inches(6), Inches(0.3), size=10, colour=AIR, font=MONO, bold=True, spacing=1.8)
+proof = [
+    ("10M+", "copies", "Dead Cells, the closest comparable. Six years of long tail from a 2017 early-access start."),
+    ("7M+", "copies", "Hades on Steam alone. The genre's breakout, and proof this is not a niche of one."),
+    ("$54.5M", "gross", "Hades II, in early access, at $29.99. Two million copies before it was even finished."),
+]
+y = Inches(2.95)
+for figure, unit, what in proof:
+    rule(s, y, Inches(5.5))
+    text(s, figure, M, y + Inches(0.14), Inches(1.7), Inches(0.45), size=22, colour=BRASS, font=MONO, bold=True)
+    text(s, unit, M + Inches(1.75), y + Inches(0.34), Inches(1.2), Inches(0.3), size=10, colour=DIM, font=MONO)
+    text(s, what, M, y + Inches(0.66), Inches(5.4), Inches(0.6), size=10, colour=MUTED, leading=1.22)
+    y += Inches(1.28)
+
+X = M + Inches(6.4)
+text(s, "AND THEY ARE HERE", X, Inches(2.5), Inches(6), Inches(0.3), size=10, colour=AIR, font=MONO, bold=True, spacing=1.8)
+here = [
+    ("72M", "gamers", "Across Saudi Arabia, the UAE and Egypt at the end of 2024. On track for 84 million by 2029."),
+    ("$2.2B", "this year", "Player spending in those three countries in 2025, heading for $3B by 2030 — the second fastest growing region on earth after India."),
+    ("$84.60", "per player, UAE", "The highest average spend per gamer in the region, and the market I am sitting in. Saudi is $54.89."),
+]
+y = Inches(2.95)
+for figure, unit, what in here:
+    rule(s, y, Inches(5.2))
+    text(s, figure, X, y + Inches(0.14), Inches(1.9), Inches(0.45), size=22, colour=AIR, font=MONO, bold=True)
+    text(s, unit, X + Inches(1.95), y + Inches(0.34), Inches(2.6), Inches(0.3), size=10, colour=DIM, font=MONO)
+    text(s, what, X, y + Inches(0.66), Inches(5.1), Inches(0.6), size=10, colour=MUTED, leading=1.22)
+    y += Inches(1.28)
+
+text(
+    s,
+    "SOURCES:  Motion Twin / Evil Empire (Dead Cells, 10M).  Supergiant Games and Alinea Analytics (Hades, Hades II).\n"
+    "Niko Partners, MENA-3 Games Market Report 2025 (players, spend, ARPU).",
+    M,
+    Inches(6.72),
+    Inches(11.6),
+    Inches(0.6),
+    size=9,
+    colour=DIM,
+    font=MONO,
+    leading=1.35,
+)
+footer(s)
+
 # =========================================================================== 02
 s = slide(prs, "The loop")
 heading(s, "Every second you spend down there\nis a second you need to get back.")
