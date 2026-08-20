@@ -261,7 +261,7 @@ test.describe("settings", () => {
     // The page used to say sound "belongs to a system that does not exist". It
     // exists now — every noise is synthesised at the moment it plays — so this
     // asserts the control is real and remembers itself.
-    await page.goto("/settings");
+    await page.goto("/settings?tab=sound");
     await expect(page.getByRole("heading", { name: /^Sound$/i })).toBeVisible();
 
     const volume = page.getByRole("slider", { name: /volume/i });
@@ -277,7 +277,7 @@ test.describe("settings", () => {
   });
 
   test("the display switches are there and both are real", async ({ page }) => {
-    await page.goto("/settings");
+    await page.goto("/settings?tab=sound");
     await expect(page.getByRole("heading", { name: /^Display$/i })).toBeVisible();
     await expect(page.getByText(/Reduce flashing/i)).toBeVisible();
     await expect(page.getByText(/Debug overlay/i)).toBeVisible();
@@ -318,7 +318,7 @@ test.describe("sound", () => {
     }
 
     // A real click on a real control should have built a context.
-    await page.goto("/settings");
+    await page.goto("/settings?tab=controls");
     await page.getByRole("button", { name: /reset to default/i }).click();
     const made = await page.evaluate(
       () => (window as unknown as { __ctxMade: number }).__ctxMade,
@@ -330,7 +330,7 @@ test.describe("sound", () => {
     // The UI reads the same volume the game does, freshly on every noise — so
     // the settings page sounds like the level you just chose rather than the one
     // you had when it loaded.
-    await page.goto("/settings");
+    await page.goto("/settings?tab=sound");
     await page.getByRole("checkbox").first().check();
     const prefs = await page.evaluate(() =>
       JSON.parse(window.localStorage.getItem("airdebt.prefs.v1") ?? "{}"),

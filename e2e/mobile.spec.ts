@@ -58,7 +58,7 @@ test.describe("on a phone", () => {
     // Sideways first: the arranger puts the buttons where they will really be,
     // and where they will really be depends on the shape of the screen.
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.goto("/settings");
+    await page.goto("/settings?tab=touch");
 
     await page.getByRole("button", { name: /arrange on screen/i }).click();
     const jump = page.getByRole("button", { name: /^jump/ });
@@ -100,7 +100,7 @@ test.describe("on a phone", () => {
     // first". What is asserted is that the label follows the selection, because
     // that label is the entire discovery mechanism.
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.goto("/settings");
+    await page.goto("/settings?tab=touch");
     await page.getByRole("button", { name: /arrange on screen/i }).click();
 
     await expect(page.getByRole("slider", { name: /^only jump$/i })).toBeVisible();
@@ -122,7 +122,7 @@ test.describe("on a phone", () => {
 
   test("resetting the pad puts every button back", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.goto("/settings");
+    await page.goto("/settings?tab=touch");
     await page.evaluate(() =>
       window.localStorage.setItem(
         "airdebt.touch.v1",

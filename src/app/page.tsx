@@ -230,6 +230,12 @@ export default function Landing() {
             CONTACT AND SUPPORT
           </a>
           <a
+            href="/terms"
+            className="inline-block font-mono text-xs tracking-widest text-[#5a6875] underline decoration-[#5a6875]/40 underline-offset-4 transition-colors hover:text-[#9fb0c0]"
+          >
+            TERMS
+          </a>
+          <a
             href="/privacy"
             className="inline-block font-mono text-xs tracking-widest text-[#5a6875] underline decoration-[#5a6875]/40 underline-offset-4 transition-colors hover:text-[#9fb0c0]"
           >
