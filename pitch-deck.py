@@ -645,6 +645,58 @@ text(
 )
 footer(s)
 
+# ================================================================ the evidence
+# THE SLIDE THAT ASKS TO BE DOUBTED.
+# Every other deck asks a room to believe it. This product's entire argument is
+# that belief should not be necessary — the server checks the run rather than
+# trusting it — so the deck has to be built the same way or the thesis is
+# decoration. Each row is a claim and the thing you can do, in this room, on
+# your own phone, to find out whether it is true.
+s = slide(prs, "Check it yourself", AIR)
+heading(s, "Nothing on the last twelve slides\nneeds to be taken on trust.")
+text(
+    s,
+    "Every claim in this deck has something you can open right now to see whether I am lying.",
+    M,
+    Inches(2.55),
+    Inches(11.4),
+    Inches(0.4),
+    size=14,
+    colour=MUTED,
+)
+
+checks = [
+    ("It is a real game", "Open " + FACTS["url"] + " and play it. No download, no account for the tutorial."),
+    ("One person built it, in public", "82 commits from 3 to 20 August, in a public repository. Read the history, not my word for it."),
+    ("It is not a prototype", "37,500 lines of TypeScript, 298 unit tests, 27 browser tests, all green on the deployment you are looking at."),
+    ("Scores are verified, not trusted", "Play a ranked run on my laptop. It appears on the board only after the server replays your keystrokes."),
+    ("The art is nobody else's", "14 Python scripts generate every frame and every sound. No asset packs, no stock audio, no licence to breach."),
+    ("The economy cannot be edited", "Open the browser console and try to give yourself gems. The balance comes back from the server."),
+    ("The market numbers are not mine", "Niko Partners, Supergiant and Motion Twin published them. The sources are printed on the slide."),
+    ("The plan is written down", "19 planning documents in the repository — brief, requirements, architecture, design, epics, sprints."),
+]
+y = Inches(3.15)
+for claim, how in checks:
+    rule(s, y)
+    text(s, claim, M, y + Inches(0.12), Inches(4.0), Inches(0.36), size=12, colour=TEXT, font=MONO, bold=True)
+    text(s, how, M + Inches(4.2), y + Inches(0.12), Inches(7.4), Inches(0.5), size=11, colour=MUTED, leading=1.2)
+    y += Inches(0.47)
+
+text(
+    s,
+    "THE ONLY THING I AM ASKING YOU TO TAKE ON TRUST IS THAT I WILL KEEP GOING.",
+    M,
+    Inches(7.0),
+    Inches(11.6),
+    Inches(0.35),
+    size=11,
+    colour=AIR,
+    font=MONO,
+    bold=True,
+    spacing=1.2,
+)
+footer(s)
+
 # ========================================================== how it makes money
 s = slide(prs, "How it makes money", BRASS)
 heading(s, "Cosmetics, seasons, and nothing that\nchanges a run.")
