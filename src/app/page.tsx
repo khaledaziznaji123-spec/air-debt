@@ -11,72 +11,84 @@ import { useAuthLinkLanding } from "./link-landing.ts";
  * a menu you come back to between runs. This is not that. This is the page that
  * has to answer "what is this" in about four seconds, and the honest answer is
  * a dark hole with a clock running, so the page is lit like the game rather
- * than like the menu. The screenshots do most of the work; the words get out of
- * their way.
+ * than like the menu.
  *
- * Everything here is real. The four shots are captures of the live build — a run
- * with one point eight seconds left on the clock, the flooded cave, the shop,
- * and a leaderboard with real scores on it — not mock-ups, and the one line
- * under the title is the game's rule rather than a slogan.
+ * REWRITTEN FOR THE FOUR SECONDS. It used to be four full-width screenshots,
+ * each followed by a paragraph of eighty words. That is a page you read, and
+ * nobody reads a page they have not decided to care about yet — the words were
+ * doing the persuading and the pictures were waiting their turn.
+ *
+ * So: one screenshot, at the moment the game is most itself, and everything
+ * else in lines short enough to take in at a glance. The dungeon's own artwork
+ * carries the atmosphere instead of more captures of the interface. The reader
+ * should be able to skim the whole page in fifteen seconds and know whether
+ * they want it — and only then meet a sign-in box.
+ *
+ * Everything here is still real. The capture is the live build with one point
+ * eight seconds left on the clock, and every number in the strip is counted out
+ * of the repository rather than rounded up for the page.
  */
 
-/**
- * The captures, and the one thing each is there to show.
- *
- * The copy here described an older game — "rock, then fire", back when those
- * were the first two environments. They are the fourth and fifth now, and the
- * order is deliberate: parkour teaches you to move, poison teaches you to read
- * a room, water takes the floor away, rock puts something in a doorway, and
- * fire is where the clock finally beats you. Saying "rock then fire" sold two
- * environments out of five and the two least interesting.
- */
-const SHOTS = [
+/** What the game asks of you, in the order you do it. */
+const STEPS = [
   {
-    src: "/shots/fire.png",
-    alt: "The fire environment with one point eight seconds of air left: the clock and its dial have gone red, a phoenix hangs above a lava pit throwing fire down at the player, and two chests sit further along the ledge.",
-    title: "Thirty seconds",
-    line: "The clock is the whole game. Every fight, every chest and every step back out is spent from the same tank. The biggest one you can buy holds three and a half minutes — and a careful run that takes every chest finishes with about five seconds left, which is exactly as much room as it sounds like.",
+    n: "01",
+    t: "Go down",
+    d: "Thirty seconds of air. The dungeon is far longer than that.",
   },
   {
-    src: "/shots/cenote.png",
-    alt: "Underwater in the flooded cave: two shafts of daylight fall through openings in the rock to the seabed, sharks cross the middle distance, and chests sit on the bottom.",
-    title: "Five environments, hardest last",
-    line: "Parkour, poison, water, rock, fire. The water is a flooded cave modelled on a real one — the rock closes over your head and the only air is the shafts of daylight. Down there you are on a second clock: five breaths.",
+    n: "02",
+    t: "Take what you can",
+    d: "Gems, gold, and the lever that opens a shortcut forever.",
   },
   {
-    src: "/shots/shop.png",
-    alt: "The shop, gear tab: an air tank at ten of ten and maxed, then rib plate, gripped boots and long stride with their gem prices and upgrade levels.",
-    title: "What you carry back",
-    line: "Gems come out of the dark and turn into reach, air and armour. Walk out and it is yours. Die down there and it stays down there — that decision, made with the clock running, is the game.",
-  },
-  {
-    src: "/shots/board.png",
-    alt: "The leaderboard, showing four ranked runs with their scores.",
-    title: "Scores you cannot fake",
-    line: "A score is never submitted. The keys that were pressed are, and the server replays them through the same simulation from a seed it issued before the run began. Forging a score means forging a run.",
+    n: "03",
+    t: "Get back out",
+    d: "Walk out and it is yours. Don't, and none of it was.",
   },
 ];
 
+/** The five, in the order they are played. */
+const DEPTHS = [
+  { name: "Parkour", d: "Teaches you to move", tone: "#7fd06a" },
+  { name: "Poison", d: "Teaches you to read a room", tone: "#a58cf0" },
+  { name: "Water", d: "Takes the floor away", tone: "#5fd9cf" },
+  { name: "Rock", d: "Puts something in the doorway", tone: "#c08a5a" },
+  { name: "Fire", d: "Where the clock beats you", tone: "#ff7a24" },
+];
+
+/** Counted out of the repository. Nothing here is rounded up. */
+const COUNTS = [
+  { v: "5", l: "environments" },
+  { v: "12", l: "enemies" },
+  { v: "30", l: "shop items" },
+  { v: "3:30", l: "most air you can hold" },
+  { v: "298", l: "tests" },
+];
+
 /**
- * The part that is worth saying out loud to somebody who builds things.
+ * The part worth saying to somebody who builds things.
  *
- * Every line here is a fact about the build rather than a claim about the
- * future, and each one is checkable — which is the point. "Server-verified" is
- * the kind of phrase that usually means nothing; here it means the server
- * re-simulates the run.
+ * Every line is a fact about the build rather than a claim about the future,
+ * and each one is checkable — which is the point. "Server-verified" is the kind
+ * of phrase that usually means nothing; here it means the server re-simulates
+ * the run.
+ *
+ * Cut to a sentence each. They used to be paragraphs, and a paragraph is where
+ * an argument goes to be skipped.
  */
 const FACTS = [
   {
     title: "The same run, every time",
-    line: "The game is a pure function of the keys you press, at a fixed sixty ticks a second. Play the same run twice and it plays out identically — on any machine, in any browser, a year from now.",
+    line: "The game is a pure function of the keys you press, sixty times a second. Play a run twice and it plays out identically, on any machine.",
   },
   {
     title: "Leaderboards you cannot fake",
-    line: "A score is never submitted. The keystrokes are, and the server replays them through the same reducer from a seed it issued before the run started. Forging a score means forging a run.",
+    line: "A score is never submitted — the keystrokes are, and the server replays them from a seed it issued first. Forging a score means forging a run.",
   },
   {
     title: "Nothing is client-written",
-    line: "There is no request in this game that adds to a balance by asking. Your loot is credited from the replay of the run that earned it — so the economy cannot be edited from a browser console, and it never could be.",
+    line: "No request in this game adds to a balance by asking. Your loot is credited from the replay of the run that earned it.",
   },
 ];
 
@@ -88,79 +100,136 @@ export default function Landing() {
     <main className="min-h-full bg-[#0b0e14] text-[#e7ecf2]">
       {/* ------------------------------------------------------------ hero */}
       <section className="relative overflow-hidden border-b border-white/5">
-        {/* The mouth of the cave, as light rather than as a picture: a cold
-            spill from the top and a warm one from below, which is exactly how
-            the game itself is lit. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(120% 90% at 50% -20%, rgba(95,217,207,0.16), transparent 60%)," +
-              "radial-gradient(90% 70% at 50% 120%, rgba(255,122,36,0.13), transparent 65%)",
-          }}
-        />
-        <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 pt-20 pb-16 text-center sm:pt-28">
+        {/* The dungeon's own back wall, from the menu's parallax — artwork
+            rather than another capture of the interface. Held well back so it
+            reads as atmosphere and never competes with the words. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <Image
+            src="/art/menu-back.png"
+            alt=""
+            width={1280}
+            height={720}
+            priority
+            className="h-full w-full object-cover opacity-[0.13] [image-rendering:pixelated]"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(120% 90% at 50% -20%, rgba(95,217,207,0.16), transparent 60%)," +
+                "radial-gradient(90% 70% at 50% 120%, rgba(255,122,36,0.14), transparent 65%)," +
+                "linear-gradient(to bottom, rgba(11,14,20,0.55), rgba(11,14,20,0.92))",
+            }}
+          />
+        </div>
+
+        <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 pt-20 pb-14 text-center sm:pt-24">
           <h1 className="font-mono text-5xl font-bold tracking-[0.3em] sm:text-7xl">
             AIR<span className="text-[#5fd9cf]"> DEBT</span>
           </h1>
-          {/* The argument, not a description.
-              This used to read "Thirty seconds of air. Five environments deep.
-              Everything you are carrying is on you" — three true facts that ask
-              the reader nothing. The second sentence is the whole game: it is
-              the reason the timer is interesting rather than merely present,
-              and it puts a question in your head before you have scrolled. */}
-          <p className="mt-6 max-w-xl text-balance text-xl leading-relaxed text-[#e7ecf2] sm:text-2xl">
+          <p className="mt-6 max-w-xl text-balance text-xl leading-snug text-[#e7ecf2] sm:text-2xl">
             Thirty seconds of air — and every second you spend down there is a
             second you need to get back.
           </p>
-          <p className="mt-4 max-w-lg text-balance text-base leading-relaxed text-[#9fb0c0] sm:text-lg">
-            Walk out and everything you are carrying is yours. Don&apos;t, and
-            none of it was.
-          </p>
 
-          {/* The sign-in used to sit here.
-              Asking for an account is the first thing a stranger was met with,
-              before they had seen a single frame of the game — which is asking
-              somebody to commit to something they have not been shown. It is at
-              the bottom now, after the screenshots and after the argument, where
-              the answer to "why would I" has already been given. */}
           <a
             href="#play"
-            className="mt-9 inline-flex items-center gap-2 rounded-full border border-[#5fd9cf]/40 px-6 py-2.5 font-mono text-xs font-bold tracking-[0.18em] text-[#5fd9cf] uppercase transition-colors hover:border-[#5fd9cf] hover:bg-[#5fd9cf]/10"
+            className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#5fd9cf]/40 px-6 py-2.5 font-mono text-xs font-bold tracking-[0.18em] text-[#5fd9cf] uppercase transition-colors hover:border-[#5fd9cf] hover:bg-[#5fd9cf]/10"
           >
             Play free <span aria-hidden>↓</span>
           </a>
-
-          <p className="mt-8 font-mono text-xs tracking-widest text-[#5a6875]">
+          <p className="mt-6 font-mono text-xs tracking-widest text-[#5a6875]">
             FREE · IN YOUR BROWSER · KEYBOARD OR PHONE
           </p>
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ shots */}
-      <section className="mx-auto max-w-5xl px-6 py-16 sm:py-24">
-        <ul className="flex flex-col gap-16 sm:gap-24">
-          {SHOTS.map((shot) => (
-            <li key={shot.src} className="flex flex-col gap-5">
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl shadow-black/60">
-                <Image
-                  src={shot.src}
-                  alt={shot.alt}
-                  width={1400}
-                  height={713}
-                  className="h-auto w-full"
-                  /* The first one is what the page is judged on, so it is not
-                     lazy: it should be there when the hero is. */
-                  priority={shot.src === SHOTS[0].src}
+      {/* ------------------------------------------------------------ steps */}
+      <section className="mx-auto max-w-5xl px-6 py-14">
+        {/* Numbered because it IS a sequence — three things in the order they
+            happen, not three features wearing numbers for decoration. */}
+        <ol className="grid gap-8 sm:grid-cols-3 sm:gap-10">
+          {STEPS.map((s) => (
+            <li key={s.n} className="flex flex-col gap-1.5">
+              <span className="font-mono text-xs tracking-[0.3em] text-[#5fd9cf]/50">
+                {s.n}
+              </span>
+              <h2 className="font-mono text-lg font-bold tracking-tight text-[#e7ecf2]">
+                {s.t}
+              </h2>
+              <p className="text-pretty text-sm leading-relaxed text-[#9fb0c0]">
+                {s.d}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* ------------------------------------------------------------- shot */}
+      <section className="mx-auto max-w-5xl px-6 pb-14">
+        {/* ONE capture, not four. This is the game at the moment it is most
+            itself: the clock red at one point eight seconds, a phoenix over a
+            lava pit, and two chests still further along the ledge. */}
+        <figure className="flex flex-col gap-3">
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl shadow-black/60">
+            <Image
+              src="/shots/fire.png"
+              alt="The fire environment with one point eight seconds of air left: the clock and its dial have gone red, a phoenix hangs above a lava pit throwing fire down at the player, and two chests sit further along the ledge."
+              width={1400}
+              height={713}
+              priority
+              className="h-auto w-full"
+            />
+          </div>
+          <figcaption className="text-center font-mono text-xs tracking-[0.18em] text-[#5a6875] uppercase">
+            1.8 seconds left · two chests still ahead · this is the decision
+          </figcaption>
+        </figure>
+      </section>
+
+      {/* ------------------------------------------------------------ depths */}
+      <section className="border-y border-white/5 bg-white/[0.02]">
+        <div className="mx-auto max-w-5xl px-6 py-12">
+          <h2 className="font-mono text-sm tracking-[0.25em] text-[#5fd9cf]">
+            FIVE ENVIRONMENTS, HARDEST LAST
+          </h2>
+          <p className="mt-2 text-sm text-[#5a6875]">
+            Parkour, poison, water, rock, fire — each one takes something away
+            from you.
+          </p>
+          <ul className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">
+            {DEPTHS.map((d) => (
+              <li key={d.name} className="flex flex-col gap-1">
+                {/* A rule in the environment's own colour does the work an icon
+                    would, at none of the cost of drawing five icons. */}
+                <span
+                  aria-hidden
+                  className="h-0.5 w-8 rounded-full"
+                  style={{ background: d.tone }}
                 />
-              </div>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-6">
-                <h2 className="shrink-0 font-mono text-sm tracking-[0.25em] text-[#5fd9cf]">
-                  {shot.title.toUpperCase()}
-                </h2>
-                <p className="text-pretty text-[#9fb0c0]">{shot.line}</p>
-              </div>
+                <span className="mt-1 font-mono text-sm font-bold text-[#e7ecf2]">
+                  {d.name}
+                </span>
+                <span className="text-xs leading-snug text-[#7d8b9a]">
+                  {d.d}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ counts */}
+      <section className="mx-auto max-w-5xl px-6 py-12">
+        <ul className="grid grid-cols-2 gap-6 sm:grid-cols-5">
+          {COUNTS.map((c) => (
+            <li key={c.l} className="flex flex-col">
+              <span className="font-mono text-3xl font-bold tabular-nums text-[#ffd166]">
+                {c.v}
+              </span>
+              <span className="mt-0.5 font-mono text-[11px] tracking-[0.14em] text-[#5a6875] uppercase">
+                {c.l}
+              </span>
             </li>
           ))}
         </ul>
@@ -168,13 +237,13 @@ export default function Landing() {
 
       {/* ------------------------------------------------------------ facts */}
       <section className="border-t border-white/5 bg-white/[0.02]">
-        <div className="mx-auto max-w-5xl px-6 py-16">
+        <div className="mx-auto max-w-5xl px-6 py-14">
           <h2 className="font-mono text-sm tracking-[0.25em] text-[#5fd9cf]">
             THINGS YOU CAN CHECK
           </h2>
-          <ul className="mt-8 grid gap-8 sm:grid-cols-3">
+          <ul className="mt-6 grid gap-8 sm:grid-cols-3">
             {FACTS.map((fact) => (
-              <li key={fact.title} className="flex flex-col gap-2">
+              <li key={fact.title} className="flex flex-col gap-1.5">
                 <h3 className="text-balance font-semibold text-[#e7ecf2]">
                   {fact.title}
                 </h3>
@@ -190,17 +259,15 @@ export default function Landing() {
       {/* -------------------------------------------------------------- play */}
       <section
         id="play"
-        className="border-t border-white/5 px-6 py-20 sm:py-28"
+        className="border-t border-white/5 px-6 py-16 sm:py-20"
       >
         <div className="mx-auto flex max-w-xl flex-col items-center text-center">
           <h2 className="font-mono text-2xl font-bold tracking-tight text-[#e7ecf2] sm:text-3xl">
             Thirty seconds is not very long.
           </h2>
-          <p className="mt-4 text-pretty text-[#9fb0c0]">
-            Free, in the browser, no download. It plays on a phone too — turn it
-            sideways and the controls appear under your thumbs. An account keeps
-            what you carry out: the shortcuts you open are permanent, and they
-            are the only way the maths ever works.
+          <p className="mt-3 text-pretty text-[#9fb0c0]">
+            Free, no download, and it plays on a phone turned sideways. An
+            account keeps what you carry out.
           </p>
           {/* A flex container, not a plain div.
               The form inside is `w-full max-w-md` with no automatic margins, so
